@@ -1,0 +1,9 @@
+Manifest-Version: 1.0
+Created-By: IntelliJ IDEA
+Built-By: CT25174
+Build-Jdk: version 1.8.0_111
+Implementation-Title: gamWS
+Implementation-Version: 0.0.1-gamWS
+Implementation-Vendor-Id: com.banvenez
+Main-Class: ${start-class}
+
