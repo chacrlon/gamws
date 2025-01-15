@@ -321,6 +321,34 @@ public class GiomAction {
 		return giomService.ejecutarRecepcion();
 
 	}
+	
+	
+	@PostMapping(value = "/listarArchivosEnDirectorio")  
+    public ResponseModel listarArchivosEnDirectorio() {  
+        log.info("Llamando a listarArchivosEnDirectorio");  
+        ResponseModel response = giomService.listarArchivosEnDirectorio();  
+        log.info("Respuesta de listarArchivosEnDirectorio: {}", response);  
+        return response;  
+    }
+	
+	
+	@PostMapping(value = "/leerArchivoDesdeFTP")  
+    public ResponseModel leerArchivoDesdeFTP() {  
+        log.info("Llamando a leerArchivoDesdeFTP");  
+        ResponseModel response = giomService.leerArchivoDesdeFTP();  
+        log.info("Respuesta de leerArchivoDesdeFTP: {}", response);  
+        return response;  
+    }
+	
+	
+	@PostMapping(value = "/moverArchivoEnFTP")  
+    public ResponseModel moverArchivoEnFTP() {  
+        log.info("Llamando a moverArchivoEnFTP");  
+        ResponseModel response = giomService.moverArchivoEnFTP();  
+        log.info("Respuesta de moverArchivoEnFTP: {}", response);  
+        return response;  
+    }
+	
 
 	private String agregarCeros(int length, int cantidadDigitos, String numeroProgramable, String CaracterAgregar) {
 

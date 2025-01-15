@@ -1,42 +1,3 @@
-/*package com.banvenez.scbdvservicios.dto;  
- 
-
-import lombok.Data;  
-
-@Data  
-public class LoteDTO {  
-
-    private String numeroDeCuenta;   
-    private String vef; // Añadir el campo vef  
-    private Double montoTransaccion;   
-    private String tipoMovimiento;     
-    private String serialOperacion;   
-    private String referencia;        
-    private String codigoOperacion;      
-    private String referencia2;    
-    private String tipoDocumento;         
-    private String cedula;                  
-
- // Método para obtener una representación en cadena  
-    public String toFormattedString() {  
-        StringBuilder sb = new StringBuilder();  
-        // Concatenar los campos y ajustar el formato  
-        sb.append(String.format("%s", numeroDeCuenta)); // Número de cuenta  
-        sb.append(String.format("%s", vef != null ? vef.trim() : "")); // VEF  
-        sb.append(String.format("%s", "0000000000")); // Referencia2  
-        sb.append(String.format("%s", String.format("%.0f", montoTransaccion != null ? montoTransaccion : 0))); // Monto de transacción sin decimales  
-        sb.append(String.format("%s", tipoMovimiento)); // Tipo de movimiento  
-        sb.append(String.format("%s", serialOperacion)); // Serial de operación  
-        sb.append(String.format("%s", referencia != null ? referencia.trim() : "")); // Referencia
-        sb.append(String.format("%s", codigoOperacion)); // Código de operación  
-        sb.append(String.format("%s", referencia2 != null ? referencia2.trim() : "")); // Referencia2 nuevamente  
-        sb.append(String.format("%s", tipoDocumento)); // Tipo de documento   
-        sb.append(String.format("%s", cedula != null ? cedula.trim() : "")); // Cédula  
-
-        return sb.toString();  
-    } 
-}*/
-
 package com.banvenez.scbdvservicios.dto;  
 
 import lombok.Data;  
@@ -44,21 +5,32 @@ import lombok.Data;
 @Data  
 public class LoteDTO {  
 
-    private static int contador = 0; // Contador estático para el incremental  
-    private String numeroDeCuenta;   // Dígito 71-90  
-    private String vef;               // Dígito 58-58  
-    private Double montoTransaccion;  // Dígito 100-116  
-    private String tipoMovimiento;     // Dígito 49-49  
-    private String serialOperacion;    // Dígito 91-95  
-    private String referencia;         // Dígito 41-48  
-    private String codigoOperacion;    // Dígito 96-99  
-    private String referencia2;        // Dígito 41-48 (relleno)  
-    private String tipoDocumento;      // Dígito 50-57  
-    private String cedula;             // Dígito 58-58  
-    private String incremental;        // Dígito 01-10  
-    private String idLote;             // ID_LOTE_GIOM_FK  
-    private String idRegistro;         // ID_REGISTRO_GIOM_PK  
-    private String fecha;              // FECHA_CARGA  
+    private static int contador = 0;
+    private String numeroDeCuenta;
+    private String vef;
+    private Double montoTransaccion;
+    private String tipoMovimiento;
+    private String serialOperacion;
+    private String referencia;
+    private String codigoOperacion;
+    private String referencia2;
+    private String tipoDocumento;
+    private String cedula;
+    private String incremental;
+    private String idLote;
+    private String idRegistro;
+    private String fecha;
+    // Nuevas variables añadidas  
+    private String numeroOrdenante; 
+    private String digitoOrdenante; 
+    private String campoLibre;
+    private String validaCedula;
+    private String tipoLote;
+    private String observacion;
+    private String cod_err;
+    private String tip_err;
+    private String des_err;
+    private String filler;
 
     // Constructor  
     public LoteDTO() {  
@@ -70,80 +42,63 @@ public class LoteDTO {
     public String toFormattedString() {  
         StringBuilder sb = new StringBuilder();  
 
-        System.out.println("Incremental: " + incremental); // Imprimir valor  
+        System.out.println("Incremental: " + incremental);  
 
-        // 2. ID_LOTE (dígitos 11-25)  
-        String idLoteFormatted = agregarCeros(idLote != null ? idLote : "0", 15); // Usar idLote  
-        System.out.println("ID Lote: " + idLoteFormatted); // Imprimir valor  
+        String idLoteFormatted = agregarCeros(idLote != null ? idLote : "0", 15);
+        System.out.println("ID Lote: " + idLoteFormatted);  
+  
+        String idRegistroFormatted = agregarCeros(idRegistro != null ? idRegistro : "0", 15); 
+        System.out.println("ID Registro: " + idRegistroFormatted);  
 
-        // 3. ID_REGISTRO (dígitos 26-40)  
-        String idRegistroFormatted = agregarCeros(idRegistro != null ? idRegistro : "0", 15); // Usar idRegistro  
-        System.out.println("ID Registro: " + idRegistroFormatted); // Imprimir valor  
-
-        // 4. REFERENCIA (dígitos 41-48)  
         String referenciaFormatted = referencia != null ? referencia.trim() : "";  
         referenciaFormatted = agregarCeros(referenciaFormatted, 8);  
-        System.out.println("Referencia: " + referenciaFormatted); // Imprimir valor  
-
-        // 5. TRANSACCION (dígito 49)  
+        System.out.println("Referencia: " + referenciaFormatted);   
+  
         String transaccion = tipoMovimiento != null ? tipoMovimiento : "";  
         transaccion = agregarCeros(transaccion, 1);  
-        System.out.println("Transacción: " + transaccion); // Imprimir valor  
-
-        // 6. FECHA (dígitos 50-57)  
+        System.out.println("Transacción: " + transaccion);
+ 
         String fechaFormatted = fecha != null ? fecha.substring(0, 10).replace("-", "") : "20241120"; // Usar fecha y formatear  
-        System.out.println("Fecha: " + fechaFormatted); // Imprimir valor  
+        System.out.println("Fecha: " + fechaFormatted);  
         
-     // 7. TIPO DOCUMENTO (dígito 50-57)  
         String tipoDocumentoFormatted = (tipoDocumento != null && !tipoDocumento.trim().isEmpty()) ? tipoDocumento.trim() : " "; // Asignar espacio vacío si está vacío  
-        System.out.println("Tipo Documento: " + tipoDocumentoFormatted); // Imprimir valor  
-
-        // 8. CEDULA (dígito 58)  
+        System.out.println("Tipo Documento: " + tipoDocumentoFormatted); 
+ 
         String cedulaFormatted = cedula != null ? cedula.trim() : "";  
-        cedulaFormatted = agregarCeros(cedulaFormatted, 8); // Asegurarse de que tenga el formato correcto  
-        System.out.println("Cédula: " + cedulaFormatted); // Imprimir valor  
-
-        // Concatenar tipoDocumento y cedula  
+        cedulaFormatted = agregarCeros(cedulaFormatted, 8);  
+        System.out.println("Cédula: " + cedulaFormatted);   
+ 
         String tipoCedula = tipoDocumentoFormatted + cedulaFormatted;  
-        tipoCedula = agregarCeros(tipoCedula, 9); // Asegurarse de que tenga el formato correcto (1 letra + 8 dígitos)  
-        System.out.println("Tipo y Cédula: " + tipoCedula); // Imprimir valor  
+        tipoCedula = agregarCeros(tipoCedula, 9);  
+        System.out.println("Tipo y Cédula: " + tipoCedula);
 
-        // 9. NUMERO-ORDENANTE (dígitos 60-69)  
-        String numeroOrdenante = agregarCeros("0012397232", 11); // Placeholder, ajustar según sea necesario  
-        System.out.println("Número Ordenante: " + numeroOrdenante); // Imprimir valor  
+        String numeroOrdenante = agregarCeros("0012397232", 11);
+        System.out.println("Número Ordenante: " + numeroOrdenante);
 
-        // 10. DIGITO-ORDENANTE (dígito 70)  
-        String digitoOrdenante = agregarCeros("0", 1); // Placeholder, ajustar según sea necesario  
-        System.out.println("Dígito Ordenante: " + digitoOrdenante); // Imprimir valor  
+        String digitoOrdenante = agregarCeros("0", 1);
+        System.out.println("Dígito Ordenante: " + digitoOrdenante);
 
-        // 11. NUMERO-CUENTA (dígitos 71-90)  
-        String numeroCuentaFormatted = agregarCeros(numeroDeCuenta != null ? numeroDeCuenta.trim() : "", 20);  
-        System.out.println("Número de Cuenta: " + numeroCuentaFormatted); // Imprimir valor  
-
-        // 12. SERIAL-BANCO (dígitos 91-95)  
+        String numeroCuentaFormatted = agregarCeros(numeroDeCuenta != null ? numeroDeCuenta.trim() : "", 20);
+        System.out.println("Número de Cuenta: " + numeroCuentaFormatted);
+ 
         String serialBanco = agregarCeros(serialOperacion != null ? serialOperacion.trim() : "", 5);  
-        System.out.println("Serial Banco: " + serialBanco); // Imprimir valor  
-
-        // 13. CODIGO-OPER (dígitos 96-99)  
+        System.out.println("Serial Banco: " + serialBanco);
+ 
         String codigoOper = agregarCeros(codigoOperacion != null ? String.valueOf(codigoOperacion) : "0", 4);  
-        System.out.println("Código Operación: " + codigoOper); // Imprimir valor  
-
-        // 14. MONTO-TRANSACCION (dígitos 100-116)  
+        System.out.println("Código Operación: " + codigoOper);
+ 
         String montoTransaccionFormatted = agregarCeros(String.valueOf(Math.round(montoTransaccion * 100)), 17); // Multiplicar por 100 y formatear  
-        System.out.println("Monto Transacción: " + montoTransaccionFormatted); // Imprimir valor  
+        System.out.println("Monto Transacción: " + montoTransaccionFormatted);
 
-        // 15. LIBRE (dígito 117)  
-        String libre = agregarCeros(" ", 1); // Campo libre  
-        System.out.println("Libre: " + libre); // Imprimir valor  
-        
-     // 16. VALIDA-CEDULA (dígito 118)  
+        String libre = agregarCeros(" ", 1);
+        System.out.println("Libre: " + libre);
+         
         String validaCedula = (cedula != null && cedula.trim().equals("00000000000")) ? "N" : "S";  
         validaCedula = agregarCeros(validaCedula, 1);  
-        System.out.println("Valida Cédula: " + validaCedula); // Imprimir valor  
+        System.out.println("Valida Cédula: " + validaCedula);
 
-        // 17. TIPO-LOTE (dígitos 119-120)  
-        String tipoLote = agregarCeros("01", 2); // Placeholder, ajustar según sea necesario  
-        System.out.println("Tipo Lote: " + tipoLote); // Imprimir valor  
+        String tipoLote = agregarCeros("01", 2);
+        System.out.println("Tipo Lote: " + tipoLote);
 
         // Concatenar todos los campos  
         sb.append(incremental);  
@@ -154,16 +109,13 @@ public class LoteDTO {
         sb.append(fechaFormatted);  
         sb.append(tipoCedula);  // Aquí se incluye el tipo de documento y la cédula  
         sb.append(" "); // Agregar un espacio en blanco  
-        //sb.append(numeroOrdenante);
-        //sb.append(digitoOrdenante);
         sb.append(numeroCuentaFormatted);  
         sb.append(serialBanco);  
         sb.append(codigoOper);  
         sb.append(montoTransaccionFormatted);  
         sb.append(" "); // Este es el campo libre   
         sb.append(validaCedula);  
-        sb.append(tipoLote);  
-        // sb.append(filler);  
+        sb.append(tipoLote);   
 
         return sb.toString();  
     }  

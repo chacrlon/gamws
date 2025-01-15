@@ -30,6 +30,7 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.io.*;
 import java.util.zip.*;
 import javax.crypto.Cipher;
@@ -64,6 +65,7 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import org.apache.commons.net.ftp.FTPClient;
+import org.apache.commons.net.ftp.FTPFile;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
@@ -2310,9 +2312,9 @@ public class GiomDao {
 
 	    return response;
 	}
-	
-	
-	
+
+
+	@Scheduled(cron = "0 0/30 * * * *")  // Se ejecuta cada 30 minutos
 	public ResponseModel ejecutarFtp() {  
 	    log.info("Iniciando el proceso asincrónico de mainframe automáticamente");  
 
@@ -2493,9 +2495,862 @@ public class GiomDao {
 	}
 	
 	
+	/*
+	public ResponseModel listarArchivosEnDirectorio() {  
+	    String host = "180.183.174.156"; // Dirección del servidor FTP  
+	    String usuario = "ftpd0326"; // Usuario FTP  
+	    String password = "Tgio@561"; // Contraseña FTP  
+	    String path = "/home/ftpd0326/giom/recive/"; // Ruta del directorio que deseas acceder  
+
+	    ResponseModel responseModel = new ResponseModel();  
+	    FTPClient ftpClient = null;  
+
+	    try {  
+	        // Obtener el cliente FTP utilizando FtpUtil  
+	    	ftpClient = FtpUtil.getFTPClient(host, 21, usuario, password);  
+	        
+	        // Verificar si la conexión fue exitosa  
+	        if (ftpClient != null && ftpClient.isConnected()) {  
+	            // Cambiar al directorio deseado  
+	            FTPFile[] archivos = FtpUtil.getFTPDirectoryFiles(ftpClient, path);  
+	            if (archivos != null) {  
+	                responseModel.setStatus(200); // Código de éxito  
+	                responseModel.setMessage("Conexión exitosa y directorio leído: " + path);  
+	                responseModel.setData(archivos); // Puedes almacenar la lista de archivos si es necesario  
+	            } else {  
+	                responseModel.setStatus(404); // No se encontró el directorio o no hay archivos  
+	                responseModel.setMessage("No se encontraron archivos en el directorio: " + path);  
+	            }  
+	        } else {  
+	            responseModel.setStatus(500); // Error interno del servidor  
+	            responseModel.setMessage("No se pudo conectar al servidor FTP.");  
+	        }  
+	    } catch (Exception e) {  
+	        log.error("Error al conectar al servidor FTP", e);  
+	        responseModel.setStatus(500); // Error interno del servidor  
+	        responseModel.setMessage("Error al conectar al servidor FTP: " + e.getMessage());  
+	    } finally {  
+	        // Desconectar usando el método de FtpUtil  
+	        if (ftpClient != null) {  
+	            FtpUtil.disConnection(ftpClient);  
+	        }  
+	    }  
+	    return responseModel; // Devolver el ResponseModel  
+	}
+	*/
 	
 	
 	
+	public ResponseModel listarArchivosEnDirectorio() {  
+	    ResponseModel responseModel = new ResponseModel();  
+	    respuestasFromDTO resp = new respuestasFromDTO();  
+	    List<String> archivosLocal = new ArrayList<>(); // Almacenar nombres de archivos  
+
+	    try (Stream<Path> walk = Files.walk(Paths.get("/home/oraclew/Oracle/Middleware/Oracle_Home/user_projects/domains/java_domain/servers/AdminServer/upload/"))) {
+	        // Filtrar todos los archivos en el directorio especificado  
+	        archivosLocal = walk.filter(Files::isRegularFile)  
+	                .map(x -> x.getFileName().toString())  
+	                .collect(Collectors.toList());  
+
+	        // Registrar la lista de archivos encontrados  
+	        log.info("Archivos encontrados: {}", archivosLocal);  
+
+	        resp.setEstatus("SUCCESS");  
+	        resp.setMensaje("Consulta realizada exitosamente");  
+	        resp.setData(archivosLocal); // Almacenar los nombres de todos los archivos encontrados  
+	    } catch (IOException e) {  
+	        resp.setEstatus("ERROR");  
+	        resp.setMensaje("Error al buscar archivos: " + e.getMessage());  
+	        log.error("Error al buscar archivos", e);  
+	    }  
+
+	    // Aquí puedes decidir cómo devolver la respuesta final  
+	    responseModel.setStatus(200); // Código de éxito  
+	    responseModel.setMessage(resp.getMensaje());  
+	    responseModel.setData(archivosLocal); // Almacenar la lista de archivos encontrados  
+
+	    return responseModel; // Devolver el ResponseModel  
+	}
+	
+	
+	public List<LoteDTO> parsearTexto(String contenido) {  
+	    List<LoteDTO> lotes = new ArrayList<>();  
+
+	    // Dividir el contenido en líneas (si hay varias líneas)  
+	    String[] lineas = contenido.split("\n");  
+
+	    for (String linea : lineas) {  
+	        if (linea.length() >= 220) {  
+	            LoteDTO lote = new LoteDTO();  
+
+	            try {  
+	                // Asignar valores a las propiedades del DTO según las posiciones  
+	                lote.setIncremental(linea.substring(0, 10).trim());  
+	                lote.setIdLote(linea.substring(11, 25).trim());  
+	                lote.setIdRegistro(linea.substring(26, 40).trim());  
+	                lote.setReferencia(linea.substring(41, 48).trim());  
+	                lote.setTipoMovimiento(linea.substring(49, 50).trim());  
+	                lote.setFecha(linea.substring(50, 57).trim());  
+	                lote.setCedula(linea.substring(58, 58).trim());  
+	                lote.setNumeroOrdenante(linea.substring(59, 69).trim());  
+	                lote.setDigitoOrdenante(linea.substring(70, 70).trim());  
+	                lote.setNumeroDeCuenta(linea.substring(71, 90).trim());  
+	                lote.setSerialOperacion(linea.substring(91, 95).trim());  
+	                lote.setCodigoOperacion(linea.substring(96, 99).trim());  
+
+	                // Validar y convertir montoTransaccion  
+	                String montoStr = linea.substring(100, 116).trim();  
+	                if (!montoStr.isEmpty()) {  
+	                    lote.setMontoTransaccion(Double.valueOf(montoStr));  
+	                } else {  
+	                    lote.setMontoTransaccion(0.0);  
+	                }  
+
+	                // Asignaciones adicionales  
+	                lote.setCampoLibre(linea.substring(116, 116).trim());  
+	                lote.setValidaCedula(linea.substring(117, 118).trim());  
+	                lote.setTipoLote(linea.substring(118, 120).trim());  
+	                
+	                //Respuesta de Mainframe
+	                lote.setObservacion(linea.substring(121, 170).trim()); 
+	                lote.setCod_err(linea.substring(170, 172).trim()); 
+	                lote.setTip_err(linea.substring(172, 179).trim()); 
+	                lote.setDes_err(linea.substring(182, 219).trim());
+
+	                // Agregar el lote a la lista  
+	                lotes.add(lote);  
+	            } catch (NumberFormatException e) {  
+	                log.error("Error al convertir montoTransaccion: {}", e.getMessage());  
+	            } catch (Exception e) {  
+	                log.error("Error al procesar la línea: {}. Error: {}", linea, e.getMessage());  
+	            }  
+	        } else {  
+	            log.warn("La línea no tiene la longitud esperada: {}", linea);  
+	        }  
+	    }  
+
+	    return lotes;  
+	}
+	
+	/* VERSION VIEJA
+	public ResponseModel actualizarRespuestaMainframe(LoteDTO datos) {  
+	    ResponseModel response = new ResponseModel();  
+	    try {  
+	        SimpleJdbcCall jdbcCall = new SimpleJdbcCall(jdbcTemplate)  
+	                .withProcedureName("GIOM.PRC_ACTUALIZAR_RESPUESTA_MAINFRAME")  
+	                .withoutProcedureColumnMetaDataAccess()  
+	                .declareParameters(  
+	                        new SqlOutParameter("COD_RET", OracleTypes.VARCHAR),  
+	                        new SqlOutParameter("DE_RET", OracleTypes.VARCHAR),  
+	                        new SqlParameter("P_ID_REGISTRO_GIOM_PK", OracleTypes.NUMBER),  
+	                        new SqlParameter("P_COD_RESPUESTA", OracleTypes.VARCHAR),  
+	                        new SqlParameter("P_DESC_RESPUESTA", OracleTypes.VARCHAR),  
+	                        new SqlParameter("P_SERIAL_RESPUESTA", OracleTypes.VARCHAR)  
+	                );  
+
+	        MapSqlParameterSource inputMap = new MapSqlParameterSource();  
+	        inputMap.addValue("P_ID_REGISTRO_GIOM_PK", datos.getIdRegistro());  
+	        inputMap.addValue("P_COD_RESPUESTA", datos.getCod_err());  
+	        inputMap.addValue("P_DESC_RESPUESTA", datos.getDes_err());  
+	        inputMap.addValue("P_SERIAL_RESPUESTA", datos.getTip_err());  
+
+	        Map<String, Object> resultMap = jdbcCall.execute(inputMap);  
+	        String codRetorno = (String) resultMap.get("COD_RET");  
+	        String descRetorno = (String) resultMap.get("DE_RET");  
+
+	        if (codRetorno.equals("1000")) {  
+	            response.setCode(1000);  
+	            response.setStatus(200);  
+	            response.setMessage(descRetorno);  
+	        } else {  
+	            response.setCode(9999);  
+	            response.setMessage(descRetorno);  
+	            response.setStatus(204);  
+	        }  
+
+	    } catch (Exception e) {  
+	        response.setCode(9999);  
+	        response.setMessage("Error al llamar al procedimiento PRC_ACTUALIZAR_RESPUESTA_MAINFRAME");  
+	        response.setStatus(500);  
+	        log.error(e.getMessage(), e);  
+	    }  
+
+	    return response;  
+	}
+	
+	*/
+	public ResponseModel actualizarRespuestaMainframe(LoteDTO datos) {  
+	    ResponseModel response = new ResponseModel();  
+	    try {  
+	        // Validar que el ID de registro no sea nulo o vacío  
+	        if (datos.getIdRegistro() == null || datos.getIdRegistro().isEmpty()) {  
+	            response.setCode(9999);  
+	            response.setMessage("El ID de registro es nulo o vacío.");  
+	            response.setStatus(400); // Bad Request  
+	            return response;  
+	        }  
+
+	        // Similar validación para otros campos necesarios si fuera necesario  
+	        if (datos.getCod_err() == null || datos.getCod_err().isEmpty()) {  
+	            response.setCode(9999);  
+	            response.setMessage("El código de error es nulo o vacío.");  
+	            response.setStatus(400); // Bad Request  
+	            return response;  
+	        }  
+
+	        SimpleJdbcCall jdbcCall = new SimpleJdbcCall(jdbcTemplate)  
+	                .withProcedureName("GIOM.PRC_ACTUALIZAR_RESPUESTA_MAINFRAME")  
+	                .withoutProcedureColumnMetaDataAccess()  
+	                .declareParameters(  
+	                        new SqlOutParameter("COD_RET", OracleTypes.VARCHAR),  
+	                        new SqlOutParameter("DE_RET", OracleTypes.VARCHAR),  
+	                        new SqlParameter("P_ID_REGISTRO_GIOM_PK", OracleTypes.NUMBER),  
+	                        new SqlParameter("P_COD_RESPUESTA", OracleTypes.VARCHAR),  
+	                        new SqlParameter("P_DESC_RESPUESTA", OracleTypes.VARCHAR),  
+	                        new SqlParameter("P_SERIAL_RESPUESTA", OracleTypes.VARCHAR)  
+	                );  
+
+	        MapSqlParameterSource inputMap = new MapSqlParameterSource();  
+	        inputMap.addValue("P_ID_REGISTRO_GIOM_PK", datos.getIdRegistro());  
+	        inputMap.addValue("P_COD_RESPUESTA", datos.getCod_err());  
+	        inputMap.addValue("P_DESC_RESPUESTA", datos.getDes_err());  
+	        inputMap.addValue("P_SERIAL_RESPUESTA", datos.getTip_err());  
+
+	        Map<String, Object> resultMap = jdbcCall.execute(inputMap);  
+	        String codRetorno = (String) resultMap.get("COD_RET");  
+	        String descRetorno = (String) resultMap.get("DE_RET");  
+
+	        if (codRetorno.equals("1000")) {  
+	            response.setCode(1000);  
+	            response.setStatus(200);  
+	            response.setMessage(descRetorno);  
+	        } else {  
+	            response.setCode(9999);  
+	            response.setMessage(descRetorno);  
+	            response.setStatus(204);  
+	        }  
+	    } catch (Exception e) {  
+	        response.setCode(9999);  
+	        response.setMessage("Error al llamar al procedimiento PRC_ACTUALIZAR_RESPUESTA_MAINFRAME: " + e.getMessage());  
+	        response.setStatus(500);  
+	        log.error(e.getMessage(), e);  
+	    }  
+	    return response;  
+	}
+	
+	
+	public ResponseModel leerArchivoDesdeFTP() {  
+	    FTPClient ftpClient = null;  
+	    InputStream inputStream = null;  
+	    ResponseModel responseModel = new ResponseModel();  
+
+	    String host = "180.183.174.156";  
+	    ConsultarConfiguarcionDTO datos = new ConsultarConfiguarcionDTO();  
+
+	    // Obtener configuración del usuario  
+	    datos.setDescriptor("FU");  
+	    List<ParametrosDTO> parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();  
+	    String usuario = parametrosPivot.get(0).getValorConfigurado();  
+
+	    // Obtener configuración de la contraseña  
+	    datos.setDescriptor("FP");  
+	    parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();  
+	    String password = parametrosPivot.get(0).getValorConfigurado();  
+
+	    String path = "/home/ftpd0326/giom/recive/";  
+	    String fileName = "GIOM_RSP101.VE241128093046";  
+	    String newFilePath = "giomrespaldo/" + fileName; // Ruta relativa para el nuevo archivo  
+
+	    try {  
+	        ftpClient = FtpUtil.getFTPClient(host, 21, usuario, password);  
+
+	        if (ftpClient != null && ftpClient.isConnected()) {  
+	            ftpClient.enterLocalPassiveMode();  
+
+	            if (!ftpClient.changeWorkingDirectory(path)) {  
+	                log.error("No se pudo cambiar al directorio: {}", path);  
+	                responseModel.setStatus(500);  
+	                responseModel.setMessage("No se pudo cambiar al directorio en el servidor FTP.");  
+	                return responseModel;  
+	            }  
+
+	            inputStream = ftpClient.retrieveFileStream(fileName);  
+
+	            if (inputStream != null) {  
+	                BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));  
+	                StringBuilder contenido = new StringBuilder();  
+	                String line;  
+	                while ((line = reader.readLine()) != null) {  
+	                    contenido.append(line).append("\n");  
+	                }  
+	                reader.close();  
+
+	                List<LoteDTO> lotes = parsearTexto(contenido.toString());  
+	                
+	                int registrosActualizados = 0;  
+	                int registrosNoActualizados = 0;  
+
+	                for (LoteDTO lote : lotes) {  
+	                    System.out.println("Código de Error: " + lote.getCod_err());  
+	                    System.out.println("Tipo de Error: " + lote.getTip_err());  
+	                    System.out.println("Descripción de Error: " + lote.getDes_err());  
+
+	                    if (lote.getIdRegistro() == null || lote.getIdRegistro().isEmpty()) {  
+	                        registrosNoActualizados++;  
+	                        System.out.println("ID Registro es nulo o vacío, se omite la actualización.");  
+	                        continue;  
+	                    }  
+
+	                    ResponseModel updateResponse = actualizarRespuestaMainframe(lote);  
+	                    if (updateResponse.getStatus() == 200) {  
+	                        System.out.println("Actualización exitosa para ID Registro: " + lote.getIdRegistro());  
+	                        registrosActualizados++;  
+	                    } else {  
+	                        System.out.println("Error en la actualización para ID Registro: " + lote.getIdRegistro() + " - " + updateResponse.getMessage());  
+	                        registrosNoActualizados++;  
+	                    }  
+	                }  
+
+	                responseModel.setData(lotes);  
+	                responseModel.setStatus(200);  
+	                responseModel.setMessage("Registros actualizados: " + registrosActualizados + ", Registros no actualizados: " + registrosNoActualizados);  
+	            } else {  
+	                log.error("El archivo no fue encontrado en el servidor.");  
+	                responseModel.setStatus(404);  
+	                responseModel.setMessage("El archivo no fue encontrado en el servidor.");  
+	            }  
+	        } else {  
+	            log.error("No se pudo conectar al servidor FTP.");  
+	            responseModel.setStatus(500);  
+	            responseModel.setMessage("No se pudo conectar al servidor FTP.");  
+	        }  
+	    } catch (Exception e) {  
+	        log.error("Error al leer el archivo desde FTP", e);  
+	        responseModel.setStatus(500);  
+	        responseModel.setMessage("Error al leer el archivo desde FTP: " + e.getMessage());  
+	    } finally {  
+	        if (inputStream != null) {  
+	            try {  
+	                inputStream.close();  
+	            } catch (IOException e) {  
+	                log.error("Error al cerrar el InputStream", e);  
+	            }  
+	        }  
+	        if (ftpClient != null) {  
+	            try {  
+	                ftpClient.logout();  
+	                ftpClient.disconnect();  
+	            } catch (IOException e) {  
+	                log.error("Error al desconectar del servidor FTP", e);  
+	            }  
+	        }  
+	    }  
+
+	    // Proceso independiente para mover el archivo  
+	    try {  
+	        ftpClient = FtpUtil.getFTPClient(host, 21, usuario, password);  
+	        
+	        if (ftpClient.isConnected()) {  
+	            ftpClient.enterLocalPassiveMode();  
+
+	            // Cambiar al directorio de origen  
+	            if (!ftpClient.changeWorkingDirectory(path)) {  
+	                log.error("No se pudo cambiar al directorio: {}", path);  
+	                responseModel.setStatus(500);  
+	                responseModel.setMessage("No se pudo cambiar al directorio en el servidor FTP.");  
+	                return responseModel;  
+	            } else {  
+	                log.info("Cambiado al directorio: {}", path);  
+	            }  
+
+	            // Verificar si el archivo existe  
+	            FTPFile[] files = ftpClient.listFiles();  
+	            boolean fileExists = Arrays.stream(files).anyMatch(f -> f.getName().equals(fileName));  
+	            if (!fileExists) {  
+	                responseModel.setStatus(500);  
+	                responseModel.setMessage("El archivo no existe en el directorio de origen.");  
+	                return responseModel;  
+	            }  
+
+	            // Intentar mover el archivo al directorio de respaldo  
+	            if (ftpClient.rename(fileName, newFilePath)) {  
+	                responseModel.setStatus(200);  
+	                responseModel.setMessage("Archivo movido exitosamente a: " + newFilePath);  
+	            } else {  
+	                int replyCode = ftpClient.getReplyCode(); // Obtener el código de respuesta  
+	                String replyString = ftpClient.getReplyString(); // Obtener mensaje de respuesta  
+	                log.error("No se pudo mover el archivo. Código de respuesta: {}, Mensaje: {}", replyCode, replyString);  
+	                responseModel.setStatus(500);  
+	                responseModel.setMessage("Error al mover el archivo: " + replyString);  
+	            }  
+	        } else {  
+	            log.error("No se pudo conectar al servidor FTP.");  
+	            responseModel.setStatus(500);  
+	            responseModel.setMessage("No se pudo conectar al servidor FTP.");  
+	        }  
+	    } catch (Exception e) {  
+	        log.error("Error al mover el archivo en FTP", e);  
+	        responseModel.setStatus(500);  
+	        responseModel.setMessage("Error al mover el archivo en FTP: " + e.getMessage());  
+	    } finally {  
+	        if (ftpClient != null) {  
+	            try {  
+	                ftpClient.logout();  
+	                ftpClient.disconnect();  
+	            } catch (IOException e) {  
+	                log.error("Error al desconectar del servidor FTP", e);  
+	            }  
+	        }  
+	    }   
+	    return responseModel;  
+	}
+	
+	
+	public ResponseModel moverArchivoEnFTP() {  
+	    FTPClient ftpClient = null;  
+	    ResponseModel responseModel = new ResponseModel();  
+
+	    String host = "180.183.174.156"; // Dirección del servidor FTP    
+	    ConsultarConfiguarcionDTO datos = new ConsultarConfiguarcionDTO();  
+	    datos.setDescriptor("FU");  
+
+	    // Obtener configuración del usuario  
+	    List<ParametrosDTO> parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();  
+	    String usuario = parametrosPivot.get(0).getValorConfigurado();  
+
+	    // Obtener configuración de la contraseña  
+	    datos.setDescriptor("FP");  
+	    parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();  
+	    String password = parametrosPivot.get(0).getValorConfigurado();  
+
+	    String path = "/home/ftpd0326/giom/recive/";  
+	    String fileName = "GIOM_RSP101.VE241128115126";  
+	    String newFilePath = "giomrespaldo/" + fileName; // Solo dejar la ruta relativa para el nuevo archivo  
+
+	    try {  
+	        ftpClient = FtpUtil.getFTPClient(host, 21, usuario, password);  
+	        
+	        if (ftpClient.isConnected()) {  
+	            ftpClient.enterLocalPassiveMode();  
+
+	            // Cambiar al directorio de origen  
+	            if (!ftpClient.changeWorkingDirectory(path)) {  
+	                log.error("No se pudo cambiar al directorio: {}", path);  
+	                responseModel.setStatus(500);  
+	                responseModel.setMessage("No se pudo cambiar al directorio en el servidor FTP.");  
+	                return responseModel;  
+	            } else {  
+	                log.info("Cambiado al directorio: {}", path);  
+	            }  
+
+	            // Verificar si el archivo existe  
+	            FTPFile[] files = ftpClient.listFiles();  
+	            boolean fileExists = Arrays.stream(files).anyMatch(f -> f.getName().equals(fileName));  
+	            if (!fileExists) {  
+	                responseModel.setStatus(500);  
+	                responseModel.setMessage("El archivo no existe en el directorio de origen.");  
+	                return responseModel;  
+	            }  
+
+	            // Intentar mover el archivo al directorio de respaldo  
+	            if (ftpClient.rename(fileName, newFilePath)) {  
+	                responseModel.setStatus(200);  
+	                responseModel.setMessage("Archivo movido exitosamente a: " + newFilePath);  
+	            } else {  
+	                int replyCode = ftpClient.getReplyCode(); // Obtener el código de respuesta  
+	                String replyString = ftpClient.getReplyString(); // Obtener mensaje de respuesta  
+	                log.error("No se pudo mover el archivo. Código de respuesta: {}, Mensaje: {}", replyCode, replyString);  
+	                responseModel.setStatus(500);  
+	                responseModel.setMessage("Error al mover el archivo: " + replyString);  
+	            }  
+	        } else {  
+	            log.error("No se pudo conectar al servidor FTP.");  
+	            responseModel.setStatus(500);  
+	            responseModel.setMessage("No se pudo conectar al servidor FTP.");  
+	        }  
+	    } catch (Exception e) {  
+	        log.error("Error al mover el archivo en FTP", e);  
+	        responseModel.setStatus(500);  
+	        responseModel.setMessage("Error al mover el archivo en FTP: " + e.getMessage());  
+	    } finally {  
+	        if (ftpClient != null) {  
+	            try {  
+	                ftpClient.logout();  
+	                ftpClient.disconnect();  
+	            } catch (IOException e) {  
+	                log.error("Error al desconectar del servidor FTP", e);  
+	            }  
+	        }  
+	    }  
+	    return responseModel;  
+	}
+	
+	/* LEER ARCHIVO ULTIMA VERSION ACTUALIZADA
+	 public ResponseModel leerArchivoDesdeFTP() {  
+	    FTPClient ftpClient = null;  
+	    InputStream inputStream = null;  
+	    ResponseModel responseModel = new ResponseModel();  
+
+	    String host = "180.183.174.156";  
+	    ConsultarConfiguarcionDTO datos = new ConsultarConfiguarcionDTO();  
+
+	    // Obtener configuración del usuario  
+	    datos.setDescriptor("FU");  
+	    List<ParametrosDTO> parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();  
+	    String usuario = parametrosPivot.get(0).getValorConfigurado();  
+
+	    // Obtener configuración de la contraseña  
+	    datos.setDescriptor("FP");  
+	    parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();  
+	    String password = parametrosPivot.get(0).getValorConfigurado();  
+
+	    String path = "/home/ftpd0326/giom/recive/";  
+	    String fileName = "GIOM_RSP101.VE241128093046";  
+	    String newFilePath = "giomrespaldo/" + fileName; // Ruta relativa para el nuevo archivo  
+
+	    try {  
+	        ftpClient = FtpUtil.getFTPClient(host, 21, usuario, password);  
+
+	        if (ftpClient != null && ftpClient.isConnected()) {  
+	            ftpClient.enterLocalPassiveMode();  
+
+	            if (!ftpClient.changeWorkingDirectory(path)) {  
+	                log.error("No se pudo cambiar al directorio: {}", path);  
+	                responseModel.setStatus(500);  
+	                responseModel.setMessage("No se pudo cambiar al directorio en el servidor FTP.");  
+	                return responseModel;  
+	            }  
+
+	            inputStream = ftpClient.retrieveFileStream(fileName);  
+
+	            if (inputStream != null) {  
+	                BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));  
+	                StringBuilder contenido = new StringBuilder();  
+	                String line;  
+	                while ((line = reader.readLine()) != null) {  
+	                    contenido.append(line).append("\n");  
+	                }  
+	                reader.close();  
+
+	                List<LoteDTO> lotes = parsearTexto(contenido.toString());  
+	                
+	                int registrosActualizados = 0;  
+	                int registrosNoActualizados = 0;  
+
+	                for (LoteDTO lote : lotes) {  
+	                    System.out.println("Código de Error: " + lote.getCod_err());  
+	                    System.out.println("Tipo de Error: " + lote.getTip_err());  
+	                    System.out.println("Descripción de Error: " + lote.getDes_err());  
+
+	                    if (lote.getIdRegistro() == null || lote.getIdRegistro().isEmpty()) {  
+	                        registrosNoActualizados++;  
+	                        System.out.println("ID Registro es nulo o vacío, se omite la actualización.");  
+	                        continue;  
+	                    }  
+
+	                    ResponseModel updateResponse = actualizarRespuestaMainframe(lote);  
+	                    if (updateResponse.getStatus() == 200) {  
+	                        System.out.println("Actualización exitosa para ID Registro: " + lote.getIdRegistro());  
+	                        registrosActualizados++;  
+	                    } else {  
+	                        System.out.println("Error en la actualización para ID Registro: " + lote.getIdRegistro() + " - " + updateResponse.getMessage());  
+	                        registrosNoActualizados++;  
+	                    }  
+	                }  
+
+	                responseModel.setData(lotes);  
+	                responseModel.setStatus(200);  
+	                responseModel.setMessage("Registros actualizados: " + registrosActualizados + ", Registros no actualizados: " + registrosNoActualizados);  
+	            } else {  
+	                log.error("El archivo no fue encontrado en el servidor.");  
+	                responseModel.setStatus(404);  
+	                responseModel.setMessage("El archivo no fue encontrado en el servidor.");  
+	            }  
+	        } else {  
+	            log.error("No se pudo conectar al servidor FTP.");  
+	            responseModel.setStatus(500);  
+	            responseModel.setMessage("No se pudo conectar al servidor FTP.");  
+	        }  
+	    } catch (Exception e) {  
+	        log.error("Error al leer el archivo desde FTP", e);  
+	        responseModel.setStatus(500);  
+	        responseModel.setMessage("Error al leer el archivo desde FTP: " + e.getMessage());  
+	    } finally {  
+	        if (inputStream != null) {  
+	            try {  
+	                inputStream.close();  
+	            } catch (IOException e) {  
+	                log.error("Error al cerrar el InputStream", e);  
+	            }  
+	        }  
+	        if (ftpClient != null) {  
+	            try {  
+	                ftpClient.logout();  
+	                ftpClient.disconnect();  
+	            } catch (IOException e) {  
+	                log.error("Error al desconectar del servidor FTP", e);  
+	            }  
+	        }  
+	    }  
+
+	    // Proceso independiente para mover el archivo  
+	    try {  
+	        ftpClient = FtpUtil.getFTPClient(host, 21, usuario, password);  
+	        
+	        if (ftpClient.isConnected()) {  
+	            ftpClient.enterLocalPassiveMode();  
+
+	            // Cambiar al directorio de origen  
+	            if (!ftpClient.changeWorkingDirectory(path)) {  
+	                log.error("No se pudo cambiar al directorio: {}", path);  
+	                responseModel.setStatus(500);  
+	                responseModel.setMessage("No se pudo cambiar al directorio en el servidor FTP.");  
+	                return responseModel;  
+	            } else {  
+	                log.info("Cambiado al directorio: {}", path);  
+	            }  
+
+	            // Verificar si el archivo existe  
+	            FTPFile[] files = ftpClient.listFiles();  
+	            boolean fileExists = Arrays.stream(files).anyMatch(f -> f.getName().equals(fileName));  
+	            if (!fileExists) {  
+	                responseModel.setStatus(500);  
+	                responseModel.setMessage("El archivo no existe en el directorio de origen.");  
+	                return responseModel;  
+	            }  
+
+	            // Intentar mover el archivo al directorio de respaldo  
+	            if (ftpClient.rename(fileName, newFilePath)) {  
+	                responseModel.setStatus(200);  
+	                responseModel.setMessage("Archivo movido exitosamente a: " + newFilePath);  
+	            } else {  
+	                int replyCode = ftpClient.getReplyCode(); // Obtener el código de respuesta  
+	                String replyString = ftpClient.getReplyString(); // Obtener mensaje de respuesta  
+	                log.error("No se pudo mover el archivo. Código de respuesta: {}, Mensaje: {}", replyCode, replyString);  
+	                responseModel.setStatus(500);  
+	                responseModel.setMessage("Error al mover el archivo: " + replyString);  
+	            }  
+	        } else {  
+	            log.error("No se pudo conectar al servidor FTP.");  
+	            responseModel.setStatus(500);  
+	            responseModel.setMessage("No se pudo conectar al servidor FTP.");  
+	        }  
+	    } catch (Exception e) {  
+	        log.error("Error al mover el archivo en FTP", e);  
+	        responseModel.setStatus(500);  
+	        responseModel.setMessage("Error al mover el archivo en FTP: " + e.getMessage());  
+	    } finally {  
+	        if (ftpClient != null) {  
+	            try {  
+	                ftpClient.logout();  
+	                ftpClient.disconnect();  
+	            } catch (IOException e) {  
+	                log.error("Error al desconectar del servidor FTP", e);  
+	            }  
+	        }  
+	    }   
+	    return responseModel;  
+	}
+	 */
+	
+	
+	/*
+	public ResponseModel leerArchivoDesdeFTP() {  
+	    FTPClient ftpClient = null; // Inicializar el FTPClient  
+	    InputStream inputStream = null;  
+	    ResponseModel responseModel = new ResponseModel();  
+
+	    // Establecer el host FTP directamente  
+	    String host = "180.183.174.156"; // Dirección del servidor FTP  
+	    // Crear un objeto para consultar la configuración  
+	    ConsultarConfiguarcionDTO datos = new ConsultarConfiguarcionDTO();  
+
+	    // Obtener configuración del usuario  
+	    datos.setDescriptor("FU");  
+	    List<ParametrosDTO> parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();  
+	    String usuario = parametrosPivot.get(0).getValorConfigurado();  
+
+	    // Obtener configuración de la contraseña  
+	    datos.setDescriptor("FP");  
+	    parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();  
+	    String password = parametrosPivot.get(0).getValorConfigurado();  
+
+	    // Configurar el path y el nombre del archivo  
+	    String path = "/home/ftpd0326/giom/recive/"; // Asegúrate de que el path sea correcto  
+	    String fileName = "GIOM_RSP101.VE241219115605"; // Nombre del archivo a leer  
+
+	    try {  
+	        ftpClient = FtpUtil.getFTPClient(host, 21, usuario, password); // Usar FtpUtil para obtener el cliente FTP  
+
+	        if (ftpClient.isConnected()) {  
+	            ftpClient.enterLocalPassiveMode(); // Cambia a modo pasivo  
+
+	            // Cambiar al directorio donde se encuentra el archivo  
+	            if (!ftpClient.changeWorkingDirectory(path)) {  
+	                log.error("No se pudo cambiar al directorio: {}", path);  
+	                responseModel.setStatus(500);  
+	                responseModel.setMessage("No se pudo cambiar al directorio en el servidor FTP.");  
+	                return responseModel;  
+	            }  
+
+	            inputStream = ftpClient.retrieveFileStream(fileName);  
+
+	            if (inputStream != null) {  
+	                BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));  
+	                StringBuilder contenido = new StringBuilder();  
+	                String line;  
+	                while ((line = reader.readLine()) != null) {  
+	                    contenido.append(line).append("\n");  
+	                }  
+	                reader.close();  
+	                
+	                // Llamar al método para parsear el contenido  
+	                List<LoteDTO> lotes = parsearTexto(contenido.toString());  
+	                
+	                // Imprimir los valores de cod_err, tip_err y des_err  
+	                for (LoteDTO lote : lotes) {  
+	                    System.out.println("Código de Error: " + lote.getCod_err());  
+	                    System.out.println("Tipo de Error: " + lote.getTip_err());  
+	                    System.out.println("Descripción de Error: " + lote.getDes_err());  
+
+	                    // Llamar al método para actualizar la respuesta en el mainframe  
+	                    ResponseModel updateResponse = actualizarRespuestaMainframe(lote);  
+	                    if (updateResponse.getStatus() == 200) {  
+	                        System.out.println("Actualización exitosa para ID Registro: " + lote.getIdRegistro());  
+	                    } else {  
+	                        System.out.println("Error en la actualización para ID Registro: " + lote.getIdRegistro() + " - " + updateResponse.getMessage());  
+	                    }  
+	                }  
+
+	                responseModel.setData(lotes); // Establecer la lista de lotes en el ResponseModel  
+	                responseModel.setStatus(200); // Código de éxito   
+	            } else {  
+	                log.error("El archivo no fue encontrado en el servidor.");  
+	                responseModel.setStatus(404); // Archivo no encontrado  
+	                responseModel.setMessage("El archivo no fue encontrado en el servidor.");  
+	            }  
+	        } else {  
+	            log.error("No se pudo conectar al servidor FTP.");  
+	            responseModel.setStatus(500); // Error de conexión  
+	            responseModel.setMessage("No se pudo conectar al servidor FTP.");  
+	        }  
+	    } catch (Exception e) {  
+	        log.error("Error al leer el archivo desde FTP", e);  
+	        responseModel.setStatus(500); // Error interno del servidor  
+	        responseModel.setMessage("Error al leer el archivo desde FTP: " + e.getMessage());  
+	    } finally {  
+	        if (inputStream != null) {  
+	            try {  
+	                inputStream.close();  
+	            } catch (IOException e) {  
+	                log.error("Error al cerrar el InputStream", e);  
+	            }  
+	        }  
+	        if (ftpClient != null) {  
+	            try {  
+	                ftpClient.logout();  
+	                ftpClient.disconnect();  
+	            } catch (IOException e) {  
+	                log.error("Error al desconectar del servidor FTP", e);  
+	            }  
+	        }  
+	    }  
+	    return responseModel;  
+	}
+	*/
+	
+	
+	public ResponseModel leerArchivoDesdeFTP2() {  
+	    FTPClient ftpClient = null; // Inicializar el FTPClient  
+	    InputStream inputStream = null;  
+	    ResponseModel responseModel = new ResponseModel();  
+
+	    // Establecer el host FTP directamente  
+	    String host = "180.183.174.156"; // Dirección del servidor FTP  
+	    // Crear un objeto para consultar la configuración  
+	    ConsultarConfiguarcionDTO datos = new ConsultarConfiguarcionDTO();  
+
+	    // Obtener configuración del usuario  
+	    datos.setDescriptor("FU");  
+	    List<ParametrosDTO> parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();  
+	    String usuario = parametrosPivot.get(0).getValorConfigurado();  
+
+	    // Obtener configuración de la contraseña  
+	    datos.setDescriptor("FP");  
+	    parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();  
+	    String password = parametrosPivot.get(0).getValorConfigurado();  
+
+	    // Configurar el path y el nombre del archivo  
+	    String path = "/home/ftpd0326/giom/recive/"; // Asegúrate de que el path sea correcto  
+	    String fileName = "GIOM_RSP101.VE241219115605"; // Nombre del archivo a leer  
+
+	    try {  
+	        ftpClient = FtpUtil.getFTPClient(host, 21, usuario, password); // Usar FtpUtil para obtener el cliente FTP  
+
+	        if (ftpClient.isConnected()) {  
+	            ftpClient.enterLocalPassiveMode(); // Cambia a modo pasivo  
+
+	            // Cambiar al directorio donde se encuentra el archivo  
+	            if (!ftpClient.changeWorkingDirectory(path)) {  
+	                log.error("No se pudo cambiar al directorio: {}", path);  
+	                responseModel.setStatus(500);  
+	                responseModel.setMessage("No se pudo cambiar al directorio en el servidor FTP.");  
+	                return responseModel;  
+	            }  
+
+	            inputStream = ftpClient.retrieveFileStream(fileName);  
+
+	            if (inputStream != null) {  
+	                BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));  
+	                StringBuilder contenido = new StringBuilder();  
+	                String line;  
+	                while ((line = reader.readLine()) != null) {  
+	                    contenido.append(line).append("\n");  
+	                }  
+	                reader.close();  
+	                
+	                // Llamar al método para parsear el contenido  
+	                List<LoteDTO> lotes = parsearTexto(contenido.toString());  
+	                
+	                responseModel.setData(lotes); // Establecer la lista de lotes en el ResponseModel  
+	               // responseModel.setData(contenido.toString()); // Establecer el contenido en el ResponseModel  
+	                responseModel.setStatus(200); // Código de éxito 
+	            } else {  
+	                log.error("El archivo no fue encontrado en el servidor.");  
+	                responseModel.setStatus(404); // Archivo no encontrado  
+	                responseModel.setMessage("El archivo no fue encontrado en el servidor.");  
+	            }  
+	        } else {  
+	            log.error("No se pudo conectar al servidor FTP.");  
+	            responseModel.setStatus(500); // Error de conexión  
+	            responseModel.setMessage("No se pudo conectar al servidor FTP.");  
+	        }  
+	    } catch (Exception e) {  
+	        log.error("Error al leer el archivo desde FTP", e);  
+	        responseModel.setStatus(500); // Error interno del servidor  
+	        responseModel.setMessage("Error al leer el archivo desde FTP: " + e.getMessage());  
+	    } finally {  
+	        if (inputStream != null) {  
+	            try {  
+	                inputStream.close();  
+	            } catch (IOException e) {  
+	                log.error("Error al cerrar el InputStream", e);  
+	            }  
+	        }  
+	        if (ftpClient != null) {  
+	            try {  
+	                ftpClient.logout();  
+	                ftpClient.disconnect();  
+	            } catch (IOException e) {  
+	                log.error("Error al desconectar del servidor FTP", e);  
+	            }  
+	        }  
+	    }  
+	    return responseModel;  
+	}
+	    
+	    
+	    
 	public ResponseModel ejecutarFtpAutomatico2() {  
 	    log.info("Iniciando el proceso asincrónico de mainframe automáticamente");  
 

@@ -7,10 +7,6 @@ import java.io.*;
 import java.net.SocketException;
 import org.apache.logging.log4j.LogManager;
 
-/**
- *
- * @author gabriel
- */
 
 public class FtpUtil {
     private static final org.apache.logging.log4j.Logger logger = LogManager.getLogger(FtpUtil.class);

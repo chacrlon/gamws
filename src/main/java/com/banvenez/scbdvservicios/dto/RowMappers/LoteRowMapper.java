@@ -21,11 +21,15 @@ public class LoteRowMapper implements RowMapper<LoteDTO> {
         lote.setTipoDocumento(rs.getString("TIPO_DOCUMENTO")); // Para TIPO_DOCUMENTO  
         lote.setCedula(rs.getString("CEDULA")); // Para CEDULA  
         
-        // Mapear los nuevos campos  
+     // Mapear los nuevos campos  
         lote.setIdLote(rs.getString("ID_LOTE_GIOM_FK")); // Para ID_LOTE_GIOM_FK  
         lote.setIdRegistro(rs.getString("ID_REGISTRO_GIOM_PK")); // Para ID_REGISTRO_GIOM_PK  
         lote.setFecha(rs.getString("FECHA_CARGA")); // Para FECHA_CARGA (solo la fecha)  
-
+        
+     // Mapear los nuevos campos  desc_respuesta_mainframe
+        lote.setCod_err(rs.getString("COD_RESPUESTA_MAINFRAME"));
+        lote.setTip_err(rs.getString("SERIAL_RESPUESTA_MAINFRAME"));
+        lote.setDes_err(rs.getString("DESC_RESPUESTA_MAINFRAME"));
         return lote;  
     }  
 }

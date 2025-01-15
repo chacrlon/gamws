@@ -558,6 +558,28 @@ public class GiomService {
 		responseModel = giomDao.ejecutarFtpAutomatico2();
 		return responseModel;
 	}
+	
+	
+	public ResponseModel listarArchivosEnDirectorio() {
+		ResponseModel responseModel = new ResponseModel();
+		responseModel = giomDao.listarArchivosEnDirectorio();
+		return responseModel;
+	}
+	
+	
+	public ResponseModel leerArchivoDesdeFTP() {
+		ResponseModel responseModel = new ResponseModel();
+		responseModel = giomDao.leerArchivoDesdeFTP();
+		return responseModel;
+	}
+	
+	
+	public ResponseModel moverArchivoEnFTP() {  
+        ResponseModel responseModel = new ResponseModel();  
+        // Llama al método del DAO que mueve el archivo en FTP  
+        responseModel = giomDao.moverArchivoEnFTP();   
+        return responseModel; // Devuelve la respuesta del DAO  
+    } 
 
 	
 	
