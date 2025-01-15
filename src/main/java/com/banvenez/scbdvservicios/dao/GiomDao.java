@@ -2758,8 +2758,7 @@ public class GiomDao {
 	    String password = parametrosPivot.get(0).getValorConfigurado();  
 
 	    String path = "/home/ftpd0326/giom/recive/";  
-	    String fileName = "GIOM_RSP101.VE241128093046";  
-	    String newFilePath = "giomrespaldo/" + fileName; // Ruta relativa para el nuevo archivo  
+	    String newDirectoryPath = "giomrespaldo/"; // Ruta relativa para el nuevo archivo  
 
 	    try {  
 	        ftpClient = FtpUtil.getFTPClient(host, 21, usuario, password);  
@@ -2774,50 +2773,120 @@ public class GiomDao {
 	                return responseModel;  
 	            }  
 
-	            inputStream = ftpClient.retrieveFileStream(fileName);  
+	            // Listar archivos en el directorio  
+	            FTPFile[] files = ftpClient.listFiles();  
+	            List<String> archivosProceso = Arrays.stream(files)  
+	                                                 .filter(f -> f.getName().startsWith("GIOM_RSP101"))  
+	                                                 .map(FTPFile::getName)  
+	                                                 .collect(Collectors.toList());  
 
-	            if (inputStream != null) {  
-	                BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));  
-	                StringBuilder contenido = new StringBuilder();  
-	                String line;  
-	                while ((line = reader.readLine()) != null) {  
-	                    contenido.append(line).append("\n");  
-	                }  
-	                reader.close();  
-
-	                List<LoteDTO> lotes = parsearTexto(contenido.toString());  
-	                
-	                int registrosActualizados = 0;  
-	                int registrosNoActualizados = 0;  
-
-	                for (LoteDTO lote : lotes) {  
-	                    System.out.println("Código de Error: " + lote.getCod_err());  
-	                    System.out.println("Tipo de Error: " + lote.getTip_err());  
-	                    System.out.println("Descripción de Error: " + lote.getDes_err());  
-
-	                    if (lote.getIdRegistro() == null || lote.getIdRegistro().isEmpty()) {  
-	                        registrosNoActualizados++;  
-	                        System.out.println("ID Registro es nulo o vacío, se omite la actualización.");  
-	                        continue;  
-	                    }  
-
-	                    ResponseModel updateResponse = actualizarRespuestaMainframe(lote);  
-	                    if (updateResponse.getStatus() == 200) {  
-	                        System.out.println("Actualización exitosa para ID Registro: " + lote.getIdRegistro());  
-	                        registrosActualizados++;  
-	                    } else {  
-	                        System.out.println("Error en la actualización para ID Registro: " + lote.getIdRegistro() + " - " + updateResponse.getMessage());  
-	                        registrosNoActualizados++;  
-	                    }  
-	                }  
-
-	                responseModel.setData(lotes);  
-	                responseModel.setStatus(200);  
-	                responseModel.setMessage("Registros actualizados: " + registrosActualizados + ", Registros no actualizados: " + registrosNoActualizados);  
-	            } else {  
-	                log.error("El archivo no fue encontrado en el servidor.");  
+	            if (archivosProceso.isEmpty()) {  
+	                log.info("No se encontraron archivos que comiencen con GIOM_RSP101.");  
 	                responseModel.setStatus(404);  
-	                responseModel.setMessage("El archivo no fue encontrado en el servidor.");  
+	                responseModel.setMessage("No se encontraron archivos que procesar.");  
+	                return responseModel;  
+	            }  
+
+	            for (String fileName : archivosProceso) {  
+	                inputStream = ftpClient.retrieveFileStream(fileName);  
+
+	                if (inputStream != null) {  
+	                    BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));  
+	                    StringBuilder contenido = new StringBuilder();  
+	                    String line;  
+	                    while ((line = reader.readLine()) != null) {  
+	                        contenido.append(line).append("\n");  
+	                    }  
+	                    reader.close();  
+
+	                    List<LoteDTO> lotes = parsearTexto(contenido.toString());  
+
+	                    int registrosActualizados = 0;  
+	                    int registrosNoActualizados = 0;  
+
+	                    for (LoteDTO lote : lotes) {  
+	                        System.out.println("Código de Error: " + lote.getCod_err());  
+	                        System.out.println("Tipo de Error: " + lote.getTip_err());  
+	                        System.out.println("Descripción de Error: " + lote.getDes_err());  
+
+	                        if (lote.getIdRegistro() == null || lote.getIdRegistro().isEmpty()) {  
+	                            registrosNoActualizados++;  
+	                            System.out.println("ID Registro es nulo o vacío, se omite la actualización.");  
+	                            continue;  
+	                        }  
+
+	                        ResponseModel updateResponse = actualizarRespuestaMainframe(lote);  
+	                        if (updateResponse.getStatus() == 200) {  
+	                            System.out.println("Actualización exitosa para ID Registro: " + lote.getIdRegistro());  
+	                            registrosActualizados++;  
+	                        } else {  
+	                            System.out.println("Error en la actualización para ID Registro: " + lote.getIdRegistro() + " - " + updateResponse.getMessage());  
+	                            registrosNoActualizados++;  
+	                        }  
+	                    }  
+
+	                    responseModel.setData(lotes);  
+	                    responseModel.setStatus(200);  
+	                    responseModel.setMessage("Registros actualizados: " + registrosActualizados + ", Registros no actualizados: " + registrosNoActualizados);  
+	                } else {  
+	                    log.error("El archivo no fue encontrado en el servidor.");  
+	                    responseModel.setStatus(404);  
+	                    responseModel.setMessage("El archivo no fue encontrado en el servidor.");  
+	                    
+	                }  
+	                
+	             // Proceso independiente para mover el archivo  
+	                String newFilePath = newDirectoryPath + fileName; // Ruta para mover el archivo  	                
+	                
+	                try {  
+	        	        ftpClient = FtpUtil.getFTPClient(host, 21, usuario, password);  
+	        	        
+	        	        if (ftpClient.isConnected()) {  
+	        	            ftpClient.enterLocalPassiveMode();  
+
+	        	            // Cambiar al directorio de origen  
+	        	            if (!ftpClient.changeWorkingDirectory(path)) {  
+	        	                log.error("No se pudo cambiar al directorio: {}", path);  
+	        	                responseModel.setStatus(500);  
+	        	                responseModel.setMessage("No se pudo cambiar al directorio en el servidor FTP.");  
+	        	                return responseModel;  
+	        	            } else {  
+	        	                log.info("Cambiado al directorio: {}", path);  
+	        	            }  
+
+	        	            // Verificar si el archivo existe  
+	        	            FTPFile[] availableFiles = ftpClient.listFiles();  
+	        	            boolean fileExists = Arrays.stream(files).anyMatch(f -> f.getName().equals(fileName));  
+	        	            if (!fileExists) {  
+	        	                responseModel.setStatus(500);  
+	        	                responseModel.setMessage("El archivo no existe en el directorio de origen.");  
+	        	                return responseModel;  
+	        	            }  
+
+	        	            // Intentar mover el archivo al directorio de respaldo  
+	        	            if (ftpClient.rename(fileName, newFilePath)) {  
+	        	                responseModel.setStatus(200);  
+	        	                responseModel.setMessage("Archivo movido exitosamente a: " + newFilePath);  
+	        	            } else {  
+	        	                int replyCode = ftpClient.getReplyCode(); // Obtener el código de respuesta  
+	        	                String replyString = ftpClient.getReplyString(); // Obtener mensaje de respuesta  
+	        	                log.error("No se pudo mover el archivo. Código de respuesta: {}, Mensaje: {}", replyCode, replyString);  
+	        	                responseModel.setStatus(500);  
+	        	                responseModel.setMessage("Error al mover el archivo: " + replyString);  
+	        	            }  
+	        	        } else {  
+	        	            log.error("No se pudo conectar al servidor FTP.");  
+	        	            responseModel.setStatus(500);  
+	        	            responseModel.setMessage("No se pudo conectar al servidor FTP.");  
+	        	        }  
+	        	    } catch (Exception e) {  
+	        	        log.error("Error al mover el archivo en FTP", e);  
+	        	        responseModel.setStatus(500);  
+	        	        responseModel.setMessage("Error al mover el archivo en FTP: " + e.getMessage());  
+	        	    }
+	                
+	                continue; // continuar con el siguiente archivo  
+	                
 	            }  
 	        } else {  
 	            log.error("No se pudo conectar al servidor FTP.");  
@@ -2844,64 +2913,8 @@ public class GiomDao {
 	                log.error("Error al desconectar del servidor FTP", e);  
 	            }  
 	        }  
-	    }  
-
-	    // Proceso independiente para mover el archivo  
-	    try {  
-	        ftpClient = FtpUtil.getFTPClient(host, 21, usuario, password);  
-	        
-	        if (ftpClient.isConnected()) {  
-	            ftpClient.enterLocalPassiveMode();  
-
-	            // Cambiar al directorio de origen  
-	            if (!ftpClient.changeWorkingDirectory(path)) {  
-	                log.error("No se pudo cambiar al directorio: {}", path);  
-	                responseModel.setStatus(500);  
-	                responseModel.setMessage("No se pudo cambiar al directorio en el servidor FTP.");  
-	                return responseModel;  
-	            } else {  
-	                log.info("Cambiado al directorio: {}", path);  
-	            }  
-
-	            // Verificar si el archivo existe  
-	            FTPFile[] files = ftpClient.listFiles();  
-	            boolean fileExists = Arrays.stream(files).anyMatch(f -> f.getName().equals(fileName));  
-	            if (!fileExists) {  
-	                responseModel.setStatus(500);  
-	                responseModel.setMessage("El archivo no existe en el directorio de origen.");  
-	                return responseModel;  
-	            }  
-
-	            // Intentar mover el archivo al directorio de respaldo  
-	            if (ftpClient.rename(fileName, newFilePath)) {  
-	                responseModel.setStatus(200);  
-	                responseModel.setMessage("Archivo movido exitosamente a: " + newFilePath);  
-	            } else {  
-	                int replyCode = ftpClient.getReplyCode(); // Obtener el código de respuesta  
-	                String replyString = ftpClient.getReplyString(); // Obtener mensaje de respuesta  
-	                log.error("No se pudo mover el archivo. Código de respuesta: {}, Mensaje: {}", replyCode, replyString);  
-	                responseModel.setStatus(500);  
-	                responseModel.setMessage("Error al mover el archivo: " + replyString);  
-	            }  
-	        } else {  
-	            log.error("No se pudo conectar al servidor FTP.");  
-	            responseModel.setStatus(500);  
-	            responseModel.setMessage("No se pudo conectar al servidor FTP.");  
-	        }  
-	    } catch (Exception e) {  
-	        log.error("Error al mover el archivo en FTP", e);  
-	        responseModel.setStatus(500);  
-	        responseModel.setMessage("Error al mover el archivo en FTP: " + e.getMessage());  
-	    } finally {  
-	        if (ftpClient != null) {  
-	            try {  
-	                ftpClient.logout();  
-	                ftpClient.disconnect();  
-	            } catch (IOException e) {  
-	                log.error("Error al desconectar del servidor FTP", e);  
-	            }  
-	        }  
 	    }   
+
 	    return responseModel;  
 	}
 	
@@ -2924,7 +2937,7 @@ public class GiomDao {
 	    String password = parametrosPivot.get(0).getValorConfigurado();  
 
 	    String path = "/home/ftpd0326/giom/recive/";  
-	    String fileName = "GIOM_RSP101.VE241128115126";  
+	    String fileName = "GIOM_RSP101.VE241127115229";  
 	    String newFilePath = "giomrespaldo/" + fileName; // Solo dejar la ruta relativa para el nuevo archivo  
 
 	    try {  
