@@ -540,6 +540,11 @@ public class GiomService {
 		responseModel = giomDao.ejecutarRecepcion();
 		return responseModel;
 	}
+	
+	public ResponseModel actualizarEstadoRegistro(String idLotes) {  
+        log.info("Actualizando estado del registro para ID(s): {}", idLotes);  
+        return giomDao.actualizarEstadoRegistro(idLotes); // Llama al método del DAO  
+    }
 
 	public ResponseModel ejecutarFtp() {
 		ResponseModel responseModel = new ResponseModel();

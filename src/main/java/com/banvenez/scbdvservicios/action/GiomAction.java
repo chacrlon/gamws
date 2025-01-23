@@ -286,6 +286,12 @@ public class GiomAction {
 		return giomService.consultarSeguimiento(datos);
 
 	}
+	
+	@PostMapping(value = "/actualizarEstadoRegistro")  
+	public ResponseModel actualizarEstadoRegistro(@RequestBody String idLotes) {  
+	    log.info("Actualizando el estado del registro para ID(s): {}", idLotes);  
+	    return giomService.actualizarEstadoRegistro(idLotes); // Llama al método del servicio  
+	}
 
 	@PostMapping(value = "/ejecutarFtp")
 	public ResponseModel ejecutarFtp() {
