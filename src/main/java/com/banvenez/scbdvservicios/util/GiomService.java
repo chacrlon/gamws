@@ -540,11 +540,11 @@ public class GiomService {
 		responseModel = giomDao.ejecutarRecepcion();
 		return responseModel;
 	}
-	
-	public ResponseModel actualizarEstadoRegistro(String idLotes) {  
-        log.info("Actualizando estado del registro para ID(s): {}", idLotes);  
-        return giomDao.actualizarEstadoRegistro(idLotes); // Llama al método del DAO  
-    }
+
+	public ResponseModel actualizarEstadoRegistro(String idLotes, String estadoRegistro) {
+		log.info("Actualizando estado del registro para ID(s): {}", idLotes);
+		return giomDao.actualizarEstadoRegistro(idLotes, estadoRegistro); // Llama al método del DAO
+	}
 
 	public ResponseModel ejecutarFtp() {
 		ResponseModel responseModel = new ResponseModel();
@@ -578,6 +578,11 @@ public class GiomService {
 		return responseModel;
 	}
 	
+	public ResponseModel comprimirArchivoLocal() {  
+	    ResponseModel responseModel = new ResponseModel(); 
+	    responseModel = giomDao.comprimirArchivoLocal(); 
+	    return responseModel; 
+	}
 	
 	public ResponseModel moverArchivoEnFTP() {  
         ResponseModel responseModel = new ResponseModel();  

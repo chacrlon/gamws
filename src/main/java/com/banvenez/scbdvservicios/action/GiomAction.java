@@ -286,11 +286,11 @@ public class GiomAction {
 		return giomService.consultarSeguimiento(datos);
 
 	}
-	
-	@PostMapping(value = "/actualizarEstadoRegistro")  
-	public ResponseModel actualizarEstadoRegistro(@RequestBody String idLotes) {  
-	    log.info("Actualizando el estado del registro para ID(s): {}", idLotes);  
-	    return giomService.actualizarEstadoRegistro(idLotes); // Llama al método del servicio  
+
+	@PostMapping(value = "/actualizarEstadoRegistro")
+	public ResponseModel actualizarEstadoRegistro(@RequestBody String idLotes, @RequestParam String estadoRegistro) {
+		log.info("Actualizando el estado del registro para ID(s): {}", idLotes);
+		return giomService.actualizarEstadoRegistro(idLotes, estadoRegistro); // Llama al método del servicio
 	}
 
 	@PostMapping(value = "/ejecutarFtp")
@@ -345,6 +345,15 @@ public class GiomAction {
         log.info("Respuesta de leerArchivoDesdeFTP: {}", response);  
         return response;  
     }
+	
+	
+	@PostMapping(value = "/comprimirArchivoLocal")  
+	public ResponseModel comprimirArchivoLocal() {  
+	    log.info("Llamando a comprimirArchivoLocal con la ruta del archivo: {}" );  
+	    ResponseModel response = giomService.comprimirArchivoLocal();  
+	    log.info("Respuesta de comprimirArchivoLocal: {}", response);  
+	    return response;  
+	}
 	
 	
 	@PostMapping(value = "/moverArchivoEnFTP")  
