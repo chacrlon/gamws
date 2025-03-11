@@ -105,6 +105,17 @@ public class GiomAction {
 		return giomService.modificarestadoslote(datos);
 
 	}
+	
+	
+	@PostMapping(value = "/modificar-estados-lote-reprocesado")
+	public ResponseModel modificarestadosloteReprocesado(@RequestBody EstadosLoteDTO datos, HttpServletRequest request) {
+
+		datos.setIp(request.getRemoteAddr());
+		log.info("modificarestadoslote => {}", datos.toString());
+
+		return giomService.modificarestadosloteReprocesado(datos);
+
+	}
 
 
 	@PostMapping(value = "/guardar-auditoria")

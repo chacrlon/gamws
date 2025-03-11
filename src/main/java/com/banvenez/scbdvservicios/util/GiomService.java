@@ -502,6 +502,23 @@ public class GiomService {
 		}
 		return responseModel;
 	}
+	
+	
+	public ResponseModel modificarestadosloteReprocesado(EstadosLoteDTO datos) {
+		ResponseModel responseModel = new ResponseModel();
+		log.info("Begin modificarestadoslote en el Service=>{}", datos.toString());
+		if ((datos.getIdlote() != null) && (datos.getNumero() != "" && datos.getNumero() != null)
+		// (datos.getEstado()!="" && datos.getEstado()!= null )
+		) {
+			responseModel = giomDao.modificardatosestadoReprocesado(datos);
+		} else {
+			log.info(" modificarestadoslote Datos no validos o en null");
+			responseModel.setCode(9999);
+			responseModel.setStatus(204);
+			responseModel.setMessage("Datos no validos o en null");
+		}
+		return responseModel;
+	}
 
 	public ResponseModel eliminacion(GuardarLoteDTO datos) {
 		ResponseModel responseModel = new ResponseModel();
