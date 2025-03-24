@@ -1,0 +1,116 @@
+2024-12-11 11:01:02,944 INFO com.banvenez.scbdvservicios.IntServiciosApplication [main] Starting IntServiciosApplication on SC1_MZ1_JBS7M with PID 26660 (started by CT25174 in D:\Documents and Settings\CT25174\Desktop\GIOMBACKEND\gamWS)
+2024-12-11 11:01:02,951 DEBUG com.banvenez.scbdvservicios.IntServiciosApplication [main] Running with Spring Boot v2.0.4.RELEASE, Spring v5.0.8.RELEASE
+2024-12-11 11:01:02,952 INFO com.banvenez.scbdvservicios.IntServiciosApplication [main] The following profiles are active: prod
+2024-12-11 11:01:02,987 INFO org.springframework.boot.web.servlet.context.AnnotationConfigServletWebServerApplicationContext [main] Refreshing org.springframework.boot.web.servlet.context.AnnotationConfigServletWebServerApplicationContext@1b699ef: startup date [Wed Dec 11 11:01:02 BOT 2024]; root of context hierarchy
+2024-12-11 11:01:03,873 INFO org.springframework.boot.web.embedded.tomcat.TomcatWebServer [main] Tomcat initialized with port(s): 8080 (http)
+2024-12-11 11:01:03,887 INFO org.apache.catalina.core.StandardService [main] Starting service [Tomcat]
+2024-12-11 11:01:03,887 INFO org.apache.catalina.core.StandardEngine [main] Starting Servlet Engine: Apache Tomcat/8.5.32
+2024-12-11 11:01:03,893 INFO org.apache.catalina.core.AprLifecycleListener [localhost-startStop-1] The APR based Apache Tomcat Native library which allows optimal performance in production environments was not found on the java.library.path: [C:\Program Files (x86)\Java\jdk1.8.0_111\bin;C:\Windows\Sun\Java\bin;C:\Windows\system32;C:\Windows;D:/Documents and Settings/CT25174/Desktop/sts-4.22.0.RELEASE//plugins/org.eclipse.justj.openjdk.hotspot.jre.full.win32.x86_64_17.0.10.v20240120-1143/jre/bin/server;D:/Documents and Settings/CT25174/Desktop/sts-4.22.0.RELEASE//plugins/org.eclipse.justj.openjdk.hotspot.jre.full.win32.x86_64_17.0.10.v20240120-1143/jre/bin;C:\Oracle19c\bin;D:\aplicaciones\product\11.2.0\client_2\bin;C:\Program Files (x86)\Serena\Dimensions 12.2\CM\prog64;C:\Program Files (x86)\Serena\Dimensions 12.2\CM\prog;C:\Program Files (x86)\Serena\Dimensions 12.2\CM\prog;C:\Program Files\Microsoft\jdk-11.0.16.101-hotspot\bin;C:\ProgramData\Oracle\Java\javapath;D:\aplicaciones\product\11.2.0\client_1;C:\Program Files\Amazon Corretto\jdk1.8.0_372\bin;C:\Program Files\Amazon Corretto\jre8\bin;C:\Program Files (x86)\VMware\VMware Workstation\bin\;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Windows\System32\OpenSSH\;C:\Program Files\IDM Computer Solutions\UltraEdit;D:\aplicaciones\nvm_software\nvm;D:\aplicaciones\nvm_software\nodejs;D:\aplicaciones\Git\cmd;D:\aplicaciones\xampp\php;C:\ProgramData\ComposerSetup\bin;C:\Program Files\Microsoft SQL Server\150\Tools\Binn\;C:\Program Files\Microsoft SQL Server\Client SDK\ODBC\170\Tools\Binn\;C:\Program Files\dotnet\;C:\Program Files (x86)\Serena\Dimensions 12.2\CM\prog64\;C:\Program Files\nodejs\;C:\Users\CT25174\AppData\Local\Microsoft\WindowsApps;C:\Users\CT25174\AppData\Local\Programs\Microsoft VS Code\bin;D:\Documents and Settings\CT25174\Application Data\npm;C:\Users\CT25174\AppData\Local\JetBrains\IntelliJ IDEA 2021.2.1\bin;;D:\Documents and Settings\CT25174\Desktop\sts-4.22.0.RELEASE;;.]
+2024-12-11 11:01:03,999 INFO org.apache.catalina.core.ContainerBase.[Tomcat].[localhost].[/] [localhost-startStop-1] Initializing Spring embedded WebApplicationContext
+2024-12-11 11:01:03,999 INFO org.springframework.web.context.ContextLoader [localhost-startStop-1] Root WebApplicationContext: initialization completed in 1012 ms
+2024-12-11 11:01:04,045 INFO org.springframework.boot.web.servlet.ServletRegistrationBean [localhost-startStop-1] Servlet dispatcherServlet mapped to [/]
+2024-12-11 11:01:04,047 INFO org.springframework.boot.web.servlet.FilterRegistrationBean [localhost-startStop-1] Mapping filter: 'characterEncodingFilter' to: [/*]
+2024-12-11 11:01:04,047 INFO org.springframework.boot.web.servlet.FilterRegistrationBean [localhost-startStop-1] Mapping filter: 'hiddenHttpMethodFilter' to: [/*]
+2024-12-11 11:01:04,047 INFO org.springframework.boot.web.servlet.FilterRegistrationBean [localhost-startStop-1] Mapping filter: 'httpPutFormContentFilter' to: [/*]
+2024-12-11 11:01:04,047 INFO org.springframework.boot.web.servlet.FilterRegistrationBean [localhost-startStop-1] Mapping filter: 'requestContextFilter' to: [/*]
+2024-12-11 11:01:04,091 INFO org.springframework.context.support.ClassPathXmlApplicationContext [main] Refreshing org.springframework.context.support.ClassPathXmlApplicationContext@f9aa66: startup date [Wed Dec 11 11:01:04 BOT 2024]; root of context hierarchy
+2024-12-11 11:01:04,092 INFO org.springframework.beans.factory.xml.XmlBeanDefinitionReader [main] Loading XML bean definitions from class path resource [beans.xml]
+2024-12-11 11:01:04,162 WARN org.springframework.context.support.ClassPathXmlApplicationContext [main] Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'dataSourceGiom': Invocation of init method failed; nested exception is javax.naming.NoInitialContextException: Need to specify class name in environment or system property, or as an applet parameter, or in an application resource file:  java.naming.factory.initial
+2024-12-11 11:01:04,164 WARN org.springframework.boot.web.servlet.context.AnnotationConfigServletWebServerApplicationContext [main] Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'intServiciosApplication': Unsatisfied dependency expressed through field 'gamService'; nested exception is org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'giomService': Unsatisfied dependency expressed through field 'giomDao'; nested exception is org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'giomDao' defined in file [D:\Documents and Settings\CT25174\Desktop\GIOMBACKEND\gamWS\target\classes\com\banvenez\scbdvservicios\dao\GiomDao.class]: Instantiation of bean failed; nested exception is org.springframework.beans.BeanInstantiationException: Failed to instantiate [com.banvenez.scbdvservicios.dao.GiomDao]: Constructor threw exception; nested exception is org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'dataSourceGiom': Invocation of init method failed; nested exception is javax.naming.NoInitialContextException: Need to specify class name in environment or system property, or as an applet parameter, or in an application resource file:  java.naming.factory.initial
+2024-12-11 11:01:04,164 INFO org.apache.catalina.core.StandardService [main] Stopping service [Tomcat]
+2024-12-11 11:01:04,202 INFO org.springframework.boot.autoconfigure.logging.ConditionEvaluationReportLoggingListener [main] 
+
+Error starting ApplicationContext. To display the conditions report re-run your application with 'debug' enabled.
+2024-12-11 11:01:04,205 ERROR org.springframework.boot.SpringApplication [main] Application run failed
+org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'intServiciosApplication': Unsatisfied dependency expressed through field 'gamService'; nested exception is org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'giomService': Unsatisfied dependency expressed through field 'giomDao'; nested exception is org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'giomDao' defined in file [D:\Documents and Settings\CT25174\Desktop\GIOMBACKEND\gamWS\target\classes\com\banvenez\scbdvservicios\dao\GiomDao.class]: Instantiation of bean failed; nested exception is org.springframework.beans.BeanInstantiationException: Failed to instantiate [com.banvenez.scbdvservicios.dao.GiomDao]: Constructor threw exception; nested exception is org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'dataSourceGiom': Invocation of init method failed; nested exception is javax.naming.NoInitialContextException: Need to specify class name in environment or system property, or as an applet parameter, or in an application resource file:  java.naming.factory.initial
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.inject(AutowiredAnnotationBeanPostProcessor.java:586)
+	at org.springframework.beans.factory.annotation.InjectionMetadata.inject(InjectionMetadata.java:91)
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor.postProcessPropertyValues(AutowiredAnnotationBeanPostProcessor.java:372)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.populateBean(AbstractAutowireCapableBeanFactory.java:1341)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:572)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:495)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:317)
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:222)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:315)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:199)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.preInstantiateSingletons(DefaultListableBeanFactory.java:759)
+	at org.springframework.context.support.AbstractApplicationContext.finishBeanFactoryInitialization(AbstractApplicationContext.java:869)
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:550)
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:140)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:762)
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:398)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:330)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1258)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1246)
+	at com.banvenez.scbdvservicios.IntServiciosApplication.main(IntServiciosApplication.java:21)
+Caused by: org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'giomService': Unsatisfied dependency expressed through field 'giomDao'; nested exception is org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'giomDao' defined in file [D:\Documents and Settings\CT25174\Desktop\GIOMBACKEND\gamWS\target\classes\com\banvenez\scbdvservicios\dao\GiomDao.class]: Instantiation of bean failed; nested exception is org.springframework.beans.BeanInstantiationException: Failed to instantiate [com.banvenez.scbdvservicios.dao.GiomDao]: Constructor threw exception; nested exception is org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'dataSourceGiom': Invocation of init method failed; nested exception is javax.naming.NoInitialContextException: Need to specify class name in environment or system property, or as an applet parameter, or in an application resource file:  java.naming.factory.initial
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.inject(AutowiredAnnotationBeanPostProcessor.java:586)
+	at org.springframework.beans.factory.annotation.InjectionMetadata.inject(InjectionMetadata.java:91)
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor.postProcessPropertyValues(AutowiredAnnotationBeanPostProcessor.java:372)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.populateBean(AbstractAutowireCapableBeanFactory.java:1341)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:572)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:495)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:317)
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:222)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:315)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:199)
+	at org.springframework.beans.factory.config.DependencyDescriptor.resolveCandidate(DependencyDescriptor.java:251)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1135)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1062)
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.inject(AutowiredAnnotationBeanPostProcessor.java:583)
+	... 19 common frames omitted
+Caused by: org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'giomDao' defined in file [D:\Documents and Settings\CT25174\Desktop\GIOMBACKEND\gamWS\target\classes\com\banvenez\scbdvservicios\dao\GiomDao.class]: Instantiation of bean failed; nested exception is org.springframework.beans.BeanInstantiationException: Failed to instantiate [com.banvenez.scbdvservicios.dao.GiomDao]: Constructor threw exception; nested exception is org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'dataSourceGiom': Invocation of init method failed; nested exception is javax.naming.NoInitialContextException: Need to specify class name in environment or system property, or as an applet parameter, or in an application resource file:  java.naming.factory.initial
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.instantiateBean(AbstractAutowireCapableBeanFactory.java:1229)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBeanInstance(AbstractAutowireCapableBeanFactory.java:1128)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:535)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:495)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:317)
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:222)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:315)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:199)
+	at org.springframework.beans.factory.config.DependencyDescriptor.resolveCandidate(DependencyDescriptor.java:251)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1135)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1062)
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.inject(AutowiredAnnotationBeanPostProcessor.java:583)
+	... 32 common frames omitted
+Caused by: org.springframework.beans.BeanInstantiationException: Failed to instantiate [com.banvenez.scbdvservicios.dao.GiomDao]: Constructor threw exception; nested exception is org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'dataSourceGiom': Invocation of init method failed; nested exception is javax.naming.NoInitialContextException: Need to specify class name in environment or system property, or as an applet parameter, or in an application resource file:  java.naming.factory.initial
+	at org.springframework.beans.BeanUtils.instantiateClass(BeanUtils.java:182)
+	at org.springframework.beans.factory.support.SimpleInstantiationStrategy.instantiate(SimpleInstantiationStrategy.java:87)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.instantiateBean(AbstractAutowireCapableBeanFactory.java:1221)
+	... 43 common frames omitted
+Caused by: org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'dataSourceGiom': Invocation of init method failed; nested exception is javax.naming.NoInitialContextException: Need to specify class name in environment or system property, or as an applet parameter, or in an application resource file:  java.naming.factory.initial
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.initializeBean(AbstractAutowireCapableBeanFactory.java:1699)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:573)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:495)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:317)
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:222)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:315)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:199)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.preInstantiateSingletons(DefaultListableBeanFactory.java:740)
+	at org.springframework.context.support.AbstractApplicationContext.finishBeanFactoryInitialization(AbstractApplicationContext.java:869)
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:550)
+	at org.springframework.context.support.ClassPathXmlApplicationContext.<init>(ClassPathXmlApplicationContext.java:144)
+	at org.springframework.context.support.ClassPathXmlApplicationContext.<init>(ClassPathXmlApplicationContext.java:85)
+	at com.banvenez.scbdvservicios.dao.GiomDao.<init>(GiomDao.java:82)
+	at sun.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
+	at sun.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:62)
+	at sun.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
+	at java.lang.reflect.Constructor.newInstance(Constructor.java:423)
+	at org.springframework.beans.BeanUtils.instantiateClass(BeanUtils.java:170)
+	... 45 common frames omitted
+Caused by: javax.naming.NoInitialContextException: Need to specify class name in environment or system property, or as an applet parameter, or in an application resource file:  java.naming.factory.initial
+	at javax.naming.spi.NamingManager.getInitialContext(NamingManager.java:662)
+	at javax.naming.InitialContext.getDefaultInitCtx(InitialContext.java:313)
+	at javax.naming.InitialContext.getURLOrDefaultInitCtx(InitialContext.java:350)
+	at javax.naming.InitialContext.lookup(InitialContext.java:417)
+	at org.springframework.jndi.JndiTemplate.lambda$lookup$0(JndiTemplate.java:156)
+	at org.springframework.jndi.JndiTemplate.execute(JndiTemplate.java:91)
+	at org.springframework.jndi.JndiTemplate.lookup(JndiTemplate.java:156)
+	at org.springframework.jndi.JndiTemplate.lookup(JndiTemplate.java:178)
+	at org.springframework.jndi.JndiLocatorSupport.lookup(JndiLocatorSupport.java:105)
+	at org.springframework.jndi.JndiObjectLocator.lookup(JndiObjectLocator.java:114)
+	at org.springframework.jndi.JndiObjectFactoryBean.lookupWithFallback(JndiObjectFactoryBean.java:238)
+	at org.springframework.jndi.JndiObjectFactoryBean.afterPropertiesSet(JndiObjectFactoryBean.java:224)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.invokeInitMethods(AbstractAutowireCapableBeanFactory.java:1758)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.initializeBean(AbstractAutowireCapableBeanFactory.java:1695)
+	... 62 common frames omitted

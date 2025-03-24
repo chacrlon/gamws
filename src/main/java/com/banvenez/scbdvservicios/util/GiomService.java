@@ -207,6 +207,12 @@ public class GiomService {
 	public ResponseModel leer(String file, String id_lote, String nombrearchivo) {  
 	    ResponseModel responseModel = new ResponseModel();  
 
+	    // Primera validación con procedimiento
+	    ResponseModel validacion = giomDao.validarNombreArchivo(nombrearchivo);
+	    if (validacion.getCode() == 1001) {
+	        return validacion; // Retorna error directamente
+	    }
+	    
 	    try {  
 	        // Decodificar el archivo Base64  
 	        byte[] bytes = Base64.getDecoder().decode(file.replaceAll("data:text/plain;base64,", ""));  

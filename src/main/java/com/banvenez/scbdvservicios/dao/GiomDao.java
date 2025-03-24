@@ -107,6 +107,32 @@ public class GiomDao {
 		this.jdbcTemplate = (JdbcTemplate) context.getBean("jdbctemplateGiom");
 	}
 	private static ZipOutputStream zos;
+	
+	public ResponseModel validarNombreArchivo(String nombrearchivo) {
+	    ResponseModel response = new ResponseModel();
+	    try {
+	        SimpleJdbcCall jdbcCall = new SimpleJdbcCall(jdbcTemplate)
+	            .withProcedureName("PRC_VALIDAR_NOMBRE_ARCHIVO")
+	            .declareParameters(
+	                new SqlParameter("P_NOMBRE_ARCHIVO", Types.VARCHAR),
+	                new SqlOutParameter("COD_RET", Types.VARCHAR),
+	                new SqlOutParameter("DE_CODRET", Types.VARCHAR)
+	            );
+
+	        MapSqlParameterSource params = new MapSqlParameterSource()
+	            .addValue("P_NOMBRE_ARCHIVO", nombrearchivo);
+
+	        Map<String, Object> result = jdbcCall.execute(params);
+	        
+	        response.setCode(Integer.parseInt((String) result.get("COD_RET")));
+	        response.setMessage((String) result.get("DE_CODRET"));
+	        
+	    } catch (Exception e) {
+	        response.setCode(9999);
+	        response.setMessage("Error en validación: " + e.getMessage());
+	    }
+	    return response;
+	}
 
 	public ResponseModel cargarArchivo(List<CargaGiomDTO> listaResultado) {
 		log.info("BEGIN " + this.getClass().getSimpleName() + ".cargar registros del archivo({})",
@@ -2233,6 +2259,7 @@ public class GiomDao {
 
 	    try {  
 	        SimpleJdbcCall jdbcCall = new SimpleJdbcCall(jdbcTemplate);  
+	        //HAY QUE ANALIZAR SI SE VA A ENVIAR EL ID DE CADA LOTE O EL ID DE CADA TRANSACCION, ACTUALMENTE ENVIA EL ID DE CADA LOTE
 	        jdbcCall.withProcedureName("PRC_OBTENER_LOTES_ACTIVOS");  
 	        jdbcCall.withoutProcedureColumnMetaDataAccess();  
 	        jdbcCall.setFunction(false);  
@@ -2818,6 +2845,7 @@ public class GiomDao {
 	    return response;  
 	}
 	
+	//ESTE ES PARA ACTUALIZAR DIARIAMENTE TODOS LOS LOTES EN ESTADO A Y W
 	@Scheduled(cron = "0 0 0 * * *")
 	public ResponseModel actualizarEstadosPorFecha() {
 	    ResponseModel response = new ResponseModel();
@@ -2860,8 +2888,51 @@ public class GiomDao {
 	        return response;
 	    }
 	}
+	
+	public ResponseModel actualizarRespuestaMainframe2(Long idLoteGiomPk) {
+	    ResponseModel response = new ResponseModel();
 
-	@Scheduled(cron = "0 * * * * *")  // Se ejecuta cada minuto
+	    try {
+	        SimpleJdbcCall jdbcCall = new SimpleJdbcCall(jdbcTemplate)
+	            .withProcedureName("PRC_ACTUALIZAR_RESPUESTA_MAINFRAME2")
+	            .declareParameters(
+	                new SqlParameter("P_ID_LOTE_GIOM_PK", OracleTypes.NUMERIC),
+	                new SqlOutParameter("COD_RET", OracleTypes.VARCHAR),
+	                new SqlOutParameter("DE_RET", OracleTypes.VARCHAR)
+	            );
+
+	        MapSqlParameterSource inputMap = new MapSqlParameterSource();
+	        inputMap.addValue("P_ID_LOTE_GIOM_PK", idLoteGiomPk);
+
+	        log.info("Llamando al procedimiento con P_ID_LOTE_GIOM_PK: {}", idLoteGiomPk);
+
+	        Map<String, Object> resultMap = jdbcCall.execute(inputMap);
+	        log.info("Resultado del procedimiento: {}", resultMap);
+
+	        String codRetorno = (String) resultMap.get("COD_RET");
+	        String descRetorno = (String) resultMap.get("DE_RET");
+
+	        if ("1000".equals(codRetorno)) {
+	            response.setStatus(200);
+	            response.setCode(Integer.parseInt(codRetorno));
+	            response.setMessage(descRetorno);
+	        } else {
+	            response.setStatus(500);
+	            response.setCode(9999);
+	            response.setMessage(descRetorno);
+	        }
+
+	    } catch (Exception e) {
+	        log.error("Error al actualizar respuesta mainframe: ", e);
+	        response.setStatus(500);
+	        response.setCode(9999);
+	        response.setMessage("Error al procesar lote en mainframe");
+	    }
+
+	    return response;
+	}
+
+	@Scheduled(cron = "0 0/30 * * * *")  // Se ejecuta cada 30 minutos
 	public ResponseModel ejecutarFtp() {
 		log.info("Iniciando el proceso asincrónico de mainframe automáticamente");
 
@@ -3030,7 +3101,7 @@ public class GiomDao {
 		return null;
 	}
 	
-	@Scheduled(cron = "0 0/5 * * * *") 
+	@Scheduled(cron = "0 0/30 * * * *")  // Se ejecuta cada 30 minutos 
 	public ResponseModel leerArchivoDesdeFTP() {  
 	    FTPClient ftpClient = null;  
 	    InputStream inputStream = null;  
@@ -3131,6 +3202,9 @@ public class GiomDao {
 	                        } else {  
 	                            registrosNoActualizados++;  
 	                        }  
+	                        
+	                        Long idLoteLong = Long.parseLong(idLoteValue);
+	                        ResponseModel updateResponse2 = actualizarRespuestaMainframe2(idLoteLong);
 	                    }  
 
 	                    responseModel.setData(lotes);  
