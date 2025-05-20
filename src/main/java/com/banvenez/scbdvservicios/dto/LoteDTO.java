@@ -124,4 +124,8 @@ public class LoteDTO {
     private String agregarCeros(String numeroProgramable, int cantidadDigitos) {  
         return String.format("%" + cantidadDigitos + "s", numeroProgramable).replace(' ', '0');  
     }  
+    
+    public static void resetContador() {
+        contador = 0;
+    }
 }

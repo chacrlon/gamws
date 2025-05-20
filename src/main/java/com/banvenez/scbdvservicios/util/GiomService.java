@@ -210,7 +210,8 @@ public class GiomService {
 	    // Primera validación con procedimiento
 	    ResponseModel validacion = giomDao.validarNombreArchivo(nombrearchivo);
 	    if (validacion.getCode() == 1001) {
-	        return validacion; // Retorna error directamente
+	        validacion.setMessage("Ese nombre de archivo ya ha sido usado"); // Asegurar mensaje
+	        return validacion;
 	    }
 	    
 	    try {  
@@ -256,38 +257,37 @@ public class GiomService {
 	            archivo.setId_lote(id_lote);  
 
 	            lalista.add(archivo);  
-	        }  
+	        } 
+	        
+	        
+	     // 3. Manejo de errores después de validaciones
+	        if (mapaErrores.get("TipoMovimiento")) {  
+	            // Respuesta específica para error de tipo movimiento
+	            responseModel.setCode(1002);
+	            responseModel.setMessage("En este modulo solo se aceptan archivos con cargos a clientes");
+	            responseModel.setStatus(400);  
+	            return responseModel; // Retorna aquí mismo
+	        }
 
-	        // Verificar si hay errores en el tipo de movimiento  
-	        if (!mapaErrores.get("TipoMovimiento")) {  
-	            log.info("leerArchivo  en el Service interno => {}", lalista.size());  
-
-	            responseModel = giomDao.cargarArchivo(lalista);  
-	            responseModel = giomDao.guardarnombreArchivo(nombrearchivo, id_lote);  
-
-	            if (giomDao.almacenarArchivoEntrada(escribirTextoPlano, nombrearchivo + "_" + id_lote)) {  
-	                log.info("Fue posible registrar en disco duro el archivo enviado por el front");  
-	            } else {  
-	                log.info("No fue posible registrar en disco duro el archivo enviado por el front");  
-	            }  
-	        } else {  
-	            log.warn("Se está ingresando un movimiento que no pinta en la aplicación");  
-	            responseModel.setCode(9999);  
-	            responseModel.setMessage("Se ingresó una cuenta con tipo de movimiento inválido");  
-	            responseModel.setStatus(500);  
-	            responseModel.setData(null);  
+	        // 4. Si pasa todas validaciones, procesar archivo
+	        responseModel = giomDao.cargarArchivo(lalista);  
+	        responseModel = giomDao.guardarnombreArchivo(nombrearchivo, id_lote);  
+	        
+	        // 5. Almacenamiento físico del archivo
+	        if (!giomDao.almacenarArchivoEntrada(escribirTextoPlano, nombrearchivo + "_" + id_lote)) {  
+	            log.error("Error al guardar archivo en disco");
 	        }  
 
 	    } catch (Exception e) {  
+	        // 6. Manejo de excepciones genéricas
 	        log.error("Error al leer el archivo: {}", e.getMessage(), e);  
 	        responseModel.setCode(9999);  
-	        responseModel.setMessage("ERROR al leer el archivo Exception");  
+	        responseModel.setMessage("Error interno al procesar el archivo");  
 	        responseModel.setStatus(500);  
-	        responseModel.setData(null);  
 	    }  
 
 	    return responseModel;  
-	}  
+	}
 
 	private String separadorValidador(String dato, int i, int i1) {  
 	    return dato.substring(i, i1);  

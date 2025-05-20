@@ -33,6 +33,6 @@
             <appender-ref ref="FILE-ROLLING"/>
         </root>
     </springProfile>
-    <!-- Logger específico para tu aplicación -->  
-    <logger name="com.banvenez.scbdvservicios" level="DEBUG"/>  
+    <!-- Logger específico para tu aplicación -->
+    <logger name="com.banvenez.scbdvservicios" level="DEBUG"/>
 </configuration>

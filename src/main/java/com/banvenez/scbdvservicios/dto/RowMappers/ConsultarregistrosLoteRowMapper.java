@@ -22,14 +22,14 @@ public class ConsultarregistrosLoteRowMapper implements RowMapper<CargaGiomDTO> 
         act.setCodigoOperacion(rs.getString("CODIGO_OPERACION"));
         act.setReferencia2(rs.getString("REFERENCIA2"));
         act.setTipoDocumento(rs.getString("TIPO_DOCUMENTO"));
-        act.setFechacarga(rs.getString("FECHA_CARGA"));
         act.setEstado(rs.getString("ESTADO_REGISTRO"));
         act.setMontorecuperado(rs.getString("MONTO_RECUPERADO"));
         act.setVef(rs.getString("VEF"));
         act.setNumeroCedula(rs.getString("CEDULA"));
-
-
-
+        
+        act.setFechacarga(rs.getString("FECHA_CARGA_FORMATEADA")); // Usa el nuevo alias
+        act.setEstado(rs.getString("ESTADO_REGISTRO")); // Ahora existe en el resultset
+        act.setEstadoNombre(rs.getString("ESTADO_NOMBRE")); 
         return act;
     }
 }

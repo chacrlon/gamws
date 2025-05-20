@@ -23,7 +23,8 @@ public class CargaGiomDTO {
     private String codRespuestaMainframe; 
     private String descripcionRespuestaMainframe; 
     private String serialRespuestaMainframe; 
-    private String estado;
+    private String estado;       // Este campo corresponde a ESTADO_REGISTRO (código)
+    private String estadoNombre; // 👈 Nuevo campo para ESTADO_NOMBRE (texto)
     
 }
 
