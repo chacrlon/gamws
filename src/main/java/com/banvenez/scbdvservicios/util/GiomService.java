@@ -34,176 +34,7 @@ import javax.servlet.http.HttpServletResponse;
 public class GiomService {
 	@Autowired
 	GiomDao giomDao;
-	
-/* ANTERIORMENTE ESTABA ESTE METODO         LEER   
-	public ResponseModel leer(String file, String id_lote, String nombrearchivo) {
-		ResponseModel responseModel = new ResponseModel();
 
-		try {
-
-			byte[] bytes = Base64.getDecoder().decode(file.replaceAll("data:text/plain;base64,", ""));
-			log.info("leerArchivo en el Service => {}", bytes);
-
-			String base64Decodificado = new String(bytes, StandardCharsets.UTF_8);
-			log.info("leerArchivo  en el Service => {}", base64Decodificado);
-
-			String[] datos = base64Decodificado.split("\n");
-
-			Map<String, Boolean> mapaErrores = new HashMap<String, Boolean>();
-			mapaErrores.put("TipoMovimiento", false);
-			List<CargaGiomDTO> lalista = new ArrayList<CargaGiomDTO>();
-			String escribirTextoPlano = "";
-			for (int i = 0; i < datos.length; i++) {
-				CargaGiomDTO archivo = new CargaGiomDTO();
-
-				if (this.separadorValidador(datos[i], 38, 39).equals("D")) {
-
-					mapaErrores.put("TipoMovimiento", true);
-					break;
-				}
-				escribirTextoPlano = escribirTextoPlano + datos[i] + "\n";
-				archivo.setNumeroCuenta(this.separadorValidador(datos[i], 0, 20));
-				archivo.setVef(this.separadorValidador(datos[i], 20, 23));
-				archivo.setMontoTransaccion(this.separadorValidador(datos[i], 23, 38));
-				archivo.setTipoMovimiento(this.separadorValidador(datos[i], 38, 39));
-				archivo.setSerialOperacion(this.separadorValidador(datos[i], 39, 44));
-				archivo.setReferencia(this.separadorValidador(datos[i], 44, 52));
-				archivo.setCodigoOperacion(this.separadorValidador(datos[i], 52, 56));
-				archivo.setReferencia2(this.separadorValidador(datos[i], 56, 76));
-				archivo.setTipoDocumento(this.separadorValidador(datos[i], 76, 77));
-				archivo.setNumeroCedula(this.separadorValidador(datos[i], 77, 89));
-				archivo.setId_lote(id_lote);
-
-				lalista.add(archivo);
-
-			}
-
-			if (!mapaErrores.get("TipoMovimiento")) {
-				log.info("leerArchivo  en el Service interno => {}", lalista.size());
-
-				responseModel = giomDao.cargarArchivo(lalista);
-
-				responseModel = giomDao.guardarnombreArchivo(nombrearchivo, id_lote);
-
-				if (giomDao.almacenarArchivoEntrada(escribirTextoPlano, nombrearchivo + "_" + id_lote)) {
-					log.info("Fue posible registrar en disco duro el archivo enviado por el front");
-				} else {
-					log.info("no posible registrar en disco duro el archivo enviado por el front");
-				}
-
-				try {
-
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-
-			} else {
-				System.out.println("se esta ingresando un movimiento que no pinta en la aplicacion ");
-				responseModel.setCode(9999);
-				responseModel.setMessage("Se ingreso una cuenta con tipo de movimiento invalido");
-				responseModel.setStatus(500);
-				responseModel.setData(null);
-			}
-
-		} catch (Exception e) {
-
-			log.error(e.getMessage(), e);
-			responseModel.setCode(9999);
-			responseModel.setMessage("ERROR al leer el archivo  Exception");
-			responseModel.setStatus(500);
-			responseModel.setData(null);
-
-		}
-
-		return responseModel;
-	}*/
-	
-	/*
-	 SEGUNDA MODIFICACION
-	public ResponseModel leer(String file, String id_lote, String nombrearchivo) {  
-	    ResponseModel responseModel = new ResponseModel();  
-
-	    try {  
-	        // Decodificar el archivo Base64  
-	        byte[] bytes = Base64.getDecoder().decode(file.replaceAll("data:text/plain;base64,", ""));  
-	        log.info("leerArchivo en el Service => {}", bytes);  
-
-	        String base64Decodificado = new String(bytes, StandardCharsets.UTF_8);  
-	        log.info("leerArchivo  en el Service => {}", base64Decodificado);  
-
-	        String[] datos = base64Decodificado.split("\n");  
-
-	        Map<String, Boolean> mapaErrores = new HashMap<>();  
-	        mapaErrores.put("TipoMovimiento", false);  
-	        List<CargaGiomDTO> lalista = new ArrayList<>();  
-	        String escribirTextoPlano = "";  
-
-	        for (int i = 0; i < datos.length; i++) {  
-	            CargaGiomDTO archivo = new CargaGiomDTO();  
-
-	            // Obtener el tipo de movimiento  
-	            String tipoMovimiento = this.separadorValidador(datos[i], 38, 39);  
-	            log.info("Tipo de movimiento para la línea {}: {}", i, tipoMovimiento);  
-
-	            // Validar el tipo de movimiento  
-	            if (tipoMovimiento.equals("D")) {  
-	                mapaErrores.put("TipoMovimiento", true);  
-	                break; // Salir del bucle si se encuentra un tipo de movimiento inválido  
-	            }  
-
-	            // Construir el objeto CargaGiomDTO  
-	            escribirTextoPlano += datos[i] + "\n";  
-	            archivo.setNumeroCuenta(this.separadorValidador(datos[i], 0, 20));  
-	            archivo.setVef(this.separadorValidador(datos[i], 20, 23));  
-	            archivo.setMontoTransaccion(this.separadorValidador(datos[i], 23, 38));  
-	            archivo.setTipoMovimiento(tipoMovimiento); // Usar el tipo de movimiento obtenido  
-	            archivo.setSerialOperacion(this.separadorValidador(datos[i], 39, 44));  
-	            archivo.setReferencia(this.separadorValidador(datos[i], 44, 52));  
-	            archivo.setCodigoOperacion(this.separadorValidador(datos[i], 52, 56));  
-	            archivo.setReferencia2(this.separadorValidador(datos[i], 56, 76));  
-	            archivo.setTipoDocumento(this.separadorValidador(datos[i], 76, 77));  
-	            archivo.setNumeroCedula(this.separadorValidador(datos[i], 77, 89));  
-	            archivo.setId_lote(id_lote);  
-
-	            lalista.add(archivo);  
-	        }  
-
-	        // Verificar si hay errores en el tipo de movimiento  
-	        if (!mapaErrores.get("TipoMovimiento")) {  
-	            log.info("leerArchivo  en el Service interno => {}", lalista.size());  
-
-	            responseModel = giomDao.cargarArchivo(lalista);  
-	            responseModel = giomDao.guardarnombreArchivo(nombrearchivo, id_lote);  
-
-	            if (giomDao.almacenarArchivoEntrada(escribirTextoPlano, nombrearchivo + "_" + id_lote)) {  
-	                log.info("Fue posible registrar en disco duro el archivo enviado por el front");  
-	            } else {  
-	                log.info("No fue posible registrar en disco duro el archivo enviado por el front");  
-	            }  
-	        } else {  
-	            log.warn("Se está ingresando un movimiento que no pinta en la aplicación");  
-	            responseModel.setCode(9999);  
-	            responseModel.setMessage("Se ingresó una cuenta con tipo de movimiento inválido");  
-	            responseModel.setStatus(500);  
-	            responseModel.setData(null);  
-	        }  
-
-	    } catch (Exception e) {  
-	        log.error("Error al leer el archivo: {}", e.getMessage(), e);  
-	        responseModel.setCode(9999);  
-	        responseModel.setMessage("ERROR al leer el archivo Exception");  
-	        responseModel.setStatus(500);  
-	        responseModel.setData(null);  
-	    }  
-
-	    return responseModel;  
-	}
-
-	private String separadorValidador(String dato, int i, int i1) {
-		return dato.substring(i, i1);
-
-	}
-*/
 	public ResponseModel leer(String file, String id_lote, String nombrearchivo) {  
 	    ResponseModel responseModel = new ResponseModel();  
 
@@ -568,6 +399,10 @@ public class GiomService {
 		log.info("Actualizando estado del registro para ID(s): {}", idLotes);
 		return giomDao.actualizarEstadoRegistro(idLotes, estadoRegistro); // Llama al método del DAO
 	}
+
+    public List<String> obtenerLogs() {
+        return giomDao.getLogs();
+    }
 
 	public ResponseModel ejecutarFtp() {
 		ResponseModel responseModel = new ResponseModel();

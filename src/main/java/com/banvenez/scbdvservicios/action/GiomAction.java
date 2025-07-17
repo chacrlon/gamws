@@ -304,6 +304,11 @@ public class GiomAction {
 		return giomService.actualizarEstadoRegistro(idLotes, estadoRegistro); // Llama al método del servicio
 	}
 
+	@PostMapping("/logs")
+    public List<String> obtenerLogs() {
+        return giomService.obtenerLogs();
+    }
+
 	@PostMapping(value = "/ejecutarFtp")
 	public ResponseModel ejecutarFtp() {
 		log.info("consultarunidades => {}");

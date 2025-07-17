@@ -1,6 +1,8 @@
 package com.banvenez.scbdvservicios.dao;
 
 import com.banvenez.scbdvservicios.dto.*;
+import org.springframework.stereotype.Component;
+import java.util.*;
 import com.banvenez.scbdvservicios.dto.RowMappers.*;
 import com.banvenez.scbdvservicios.util.CifradoData;
 import com.banvenez.scbdvservicios.util.FtpUtil;
@@ -29,6 +31,7 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.io.*;
@@ -78,20 +81,22 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
 
-import org.apache.commons.net.ftp.FTPClient;  
-//Otras importaciones necesarias  
-import java.io.ByteArrayOutputStream;  
-import java.io.IOException;  
-import java.io.InputStream;  
-import java.io.ByteArrayInputStream;  
-import java.util.zip.ZipEntry;  
-import java.util.zip.ZipOutputStream;  
+import org.apache.commons.net.ftp.FTPClient;
+//Otras importaciones necesarias
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.ByteArrayInputStream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import com.jcraft.jsch.ChannelExec;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.Session;
 
-//... (el resto del código está aquí)
+import org.apache.commons.net.ftp.FTP;          // Añade esto
+import org.apache.commons.net.ftp.FTPClient;    // Asegúrate de tener esto
+import org.apache.commons.net.ftp.FTPFile;
 
 @Slf4j
 @Service
@@ -108,31 +113,31 @@ public class GiomDao {
 		this.jdbcTemplate = (JdbcTemplate) context.getBean("jdbctemplateGiom");
 	}
 	private static ZipOutputStream zos;
-	
+
 	public ResponseModel validarNombreArchivo(String nombrearchivo) {
-	    ResponseModel response = new ResponseModel();
-	    try {
-	        SimpleJdbcCall jdbcCall = new SimpleJdbcCall(jdbcTemplate)
-	            .withProcedureName("PRC_VALIDAR_NOMBRE_ARCHIVO")
-	            .declareParameters(
-	                new SqlParameter("P_NOMBRE_ARCHIVO", Types.VARCHAR),
-	                new SqlOutParameter("COD_RET", Types.VARCHAR),
-	                new SqlOutParameter("DE_CODRET", Types.VARCHAR)
-	            );
+		ResponseModel response = new ResponseModel();
+		try {
+			SimpleJdbcCall jdbcCall = new SimpleJdbcCall(jdbcTemplate)
+					.withProcedureName("PRC_VALIDAR_NOMBRE_ARCHIVO")
+					.declareParameters(
+							new SqlParameter("P_NOMBRE_ARCHIVO", Types.VARCHAR),
+							new SqlOutParameter("COD_RET", Types.VARCHAR),
+							new SqlOutParameter("DE_CODRET", Types.VARCHAR)
+					);
 
-	        MapSqlParameterSource params = new MapSqlParameterSource()
-	            .addValue("P_NOMBRE_ARCHIVO", nombrearchivo);
+			MapSqlParameterSource params = new MapSqlParameterSource()
+					.addValue("P_NOMBRE_ARCHIVO", nombrearchivo);
 
-	        Map<String, Object> result = jdbcCall.execute(params);
-	        
-	        response.setCode(Integer.parseInt((String) result.get("COD_RET")));
-	        response.setMessage((String) result.get("DE_CODRET"));
-	        
-	    } catch (Exception e) {
-	        response.setCode(9999);
-	        response.setMessage("Error en validación: " + e.getMessage());
-	    }
-	    return response;
+			Map<String, Object> result = jdbcCall.execute(params);
+
+			response.setCode(Integer.parseInt((String) result.get("COD_RET")));
+			response.setMessage((String) result.get("DE_CODRET"));
+
+		} catch (Exception e) {
+			response.setCode(9999);
+			response.setMessage("Error en validación: " + e.getMessage());
+		}
+		return response;
 	}
 
 	public ResponseModel cargarArchivo(List<CargaGiomDTO> listaResultado) {
@@ -475,7 +480,7 @@ public class GiomDao {
 		}
 	}
 
-	
+
 	//METODO PARA FILTRAR CONSULTAS DE Búsqueda de Transacciones de Lotes
 	public ResponseModel consultarrangotransacciones(ConsultarRangotransaccionesDTO datos) {
 		ResponseModel response2 = new ResponseModel();
@@ -629,7 +634,7 @@ public class GiomDao {
 			return response2;
 		}
 	}
-// LOTES
+	// LOTES
 	public ResponseModel detalleslote(GuardarLoteDTO datos) {
 		ResponseModel response2 = new ResponseModel();
 		GuardarLoteDTO response = null;
@@ -807,7 +812,7 @@ public class GiomDao {
 		}
 	}
 
-	
+
 	public ResponseModel aprobacion(GuardarLoteDTO datos, String ip) {
 		ResponseModel response = new ResponseModel();
 		try {
@@ -876,8 +881,8 @@ public class GiomDao {
 	}
 
 	private boolean guardarSeguimiento(String decripcionSeguimiento, String codigoEmpleado, String nomreEmpleado,
-			String apellidoEmpleado, String cedulaEmpleado, String codigoUnidad, String descripcionUnidad,
-			String ipEmpleado, String idlote) {
+									   String apellidoEmpleado, String cedulaEmpleado, String codigoUnidad, String descripcionUnidad,
+									   String ipEmpleado, String idlote) {
 		try {
 
 			SimpleJdbcCall jdbcCall = new SimpleJdbcCall(jdbcTemplate);
@@ -1203,9 +1208,9 @@ public class GiomDao {
 	}
 
 	private boolean guardarSeguimientoLista(String decripcionSeguimiento, String codigoEmpleado, String nomreEmpleado,
-			String apellidoEmpleado,
-			String cedulaEmpleado, String codigoUnidad, String descripcionUnidad, String ipEmpleado,
-			List<String> idLotes) {
+											String apellidoEmpleado,
+											String cedulaEmpleado, String codigoUnidad, String descripcionUnidad, String ipEmpleado,
+											List<String> idLotes) {
 		try {
 			SimpleJdbcCall jdbcCall = new SimpleJdbcCall(jdbcTemplate);
 			jdbcCall.withProcedureName("PRC_INSERTAR_SEGUIMIENTO_LISTA_LOTE");
@@ -2052,512 +2057,332 @@ public class GiomDao {
 			return resp;
 		}
 	}
-/*
-	@Scheduled(cron="30 * * * * *" )
-	public ResponseModel ejecutarFtp() {
-		log.info("iniciando el proceso asincronico de mainframe");
-		//CHEQUEAMOS SI EXISTEN LOTES CON ESTATUS A, EN CASO DE EXISTIR ENTONCES NO SE PUEDE REALIZAR EL PROCESO
-		boolean ejecutado = this.verificarDataMainframe();
-		if (ejecutado) {
-			log.info("No existe data en mainframe, consultando bloque de horas");
-			ConsultarConfiguarcionDTO HoraData = new ConsultarConfiguarcionDTO();
-			HoraData.setDescriptor("H");
-			ResponseModel dataHoraSalida = this.consultarConfiguracion(HoraData);
-			ArrayList<ParametrosDTO> horasData = (ArrayList<ParametrosDTO>) dataHoraSalida.getData();
-			for (ParametrosDTO parametrosDTO : horasData) {
-				if (parametrosDTO.getEstado() == 1) {
-					LocalTime hora = LocalTime.parse(parametrosDTO.getValorConfigurado());
-					if (hora.getHour() == LocalTime.now().getHour()) {
-						ejecutado = true;
-						break;
-					}
-				}
-			}
-		} else {
-			log.info("Existe data en mainframe, no se puede ejecutar el nuevo proceso");
+
+
+	public ResponseModel obtenerLotesActivos() {
+		ResponseModel response = new ResponseModel();
+		String codRetorno;
+		String descRetorno;
+		String resultado = ""; // Inicializar como cadena vacía
+
+		try {
+			SimpleJdbcCall jdbcCall = new SimpleJdbcCall(jdbcTemplate);
+			//HAY QUE ANALIZAR SI SE VA A ENVIAR EL ID DE CADA LOTE O EL ID DE CADA TRANSACCION, ACTUALMENTE ENVIA EL ID DE CADA LOTE
+			jdbcCall.withProcedureName("PRC_OBTENER_LOTES_ACTIVOS");
+			jdbcCall.withoutProcedureColumnMetaDataAccess();
+			jdbcCall.setFunction(false);
+			jdbcCall.declareParameters(
+					new SqlOutParameter("RESULTADO", OracleTypes.VARCHAR), // Cambiar a VARCHAR2
+					new SqlOutParameter("COD_RET", OracleTypes.VARCHAR),
+					new SqlOutParameter("DE_CODRET", OracleTypes.VARCHAR)
+			);
+
+			// Ejecutar el procedimiento sin parámetros de entrada
+			Map<String, Object> resultMap = jdbcCall.execute();
+
+			// Obtener el resultado como String
+			resultado = (String) resultMap.get("RESULTADO");
+
+			// Obtener los códigos de retorno
+			codRetorno = (String) resultMap.get("COD_RET");
+			descRetorno = (String) resultMap.get("DE_CODRET");
+
+			log.info("Resultado del procedimiento: Código = {}, Descripción = {}, Resultado = {}", codRetorno, descRetorno, resultado);
+
+			// Configurar la respuesta exitosa
+			response.setCode(Integer.parseInt(codRetorno));
+			response.setMessage(descRetorno);
+			response.setStatus(200);
+			response.setData(resultado); // Almacenar el resultado como String
+		} catch (Exception e) {
+			log.error("Error al ejecutar el procedimiento", e);
+			response.setCode(9999);
+			response.setMessage("Error al ejecutar el procedimiento: " + e.getMessage());
+			response.setStatus(500);
 		}
-		if (ejecutado) {
-			log.info("se inicia el proceso de consulta de base de datos para determinar la data de envío");
-			log.info("iniciando proceso");
-			InputStream in = null;
-			BufferedReader br = null;
-			FTPClient ftpClient = null;
-			ConsultarConfiguarcionDTO datos = new ConsultarConfiguarcionDTO();
-			datos.setDescriptor("FH");
-			List<ParametrosDTO> parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();
-			String host = parametrosPivot.get(0).getValorConfigurado();
-			datos.setDescriptor("FP");
-			parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();
-			String password = parametrosPivot.get(0).getValorConfigurado();
-			datos.setDescriptor("FU");
-			parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();
-			String usuario = parametrosPivot.get(0).getValorConfigurado();
-			log.info("iniciando consulta de documentos xml en el servidor ftp");
-			log.info("host ftp  \r\n " + host + " \r\n password de directorio remoto: " + password + " \r\n usuario:  "
-					+ usuario);
-			log.info("iniciando conexion");
-			ftpClient = FtpUtil.getFTPClient(host, 21, usuario, password);
-			if (ftpClient.isConnected()) {
-				log.info("conexion establecida correctamente con el ftp");
-				//AQUI AVERIGUAMOS CUALES SON LOS LOTES QUE SE ENVIARAN A MAINFRAME
-				ArrayList<LoteMainframe> listaLotesEjecutar = this.consultarListaLotesMainframe();
-				//AQUI ALMACENAMOS LOS DATOS QUE SE ENVIARA A MAINFRAME ES DECIR PREPARAMOS LA TRAMA DE DATOS
-				String mainframeData = "";
-				List<String> idLotes = new ArrayList<>();
-				for (LoteMainframe guardarLoteDTO : listaLotesEjecutar) {
-					log.info("procediendo a almacenar el lote: " + guardarLoteDTO.toString());
-					idLotes.add(guardarLoteDTO.getIdlote());
-				}
-				LocalDate date = LocalDate.now();
-				ArrayList<CargaGiomDTO> dataAdd = this.dataMainframeTransacciones(idLotes);
-				List<String> idTransacciones = new ArrayList<>();
-				for (CargaGiomDTO guardarLoteDTO2 : dataAdd) {
-					idTransacciones.add(guardarLoteDTO2.getId_lote());
-					Integer cantidad = guardarLoteDTO2.getMontoTransaccion().length();
-					Integer recorrer = 15 - cantidad;
-					String ceros = "";
-					for (int i = 0; i < recorrer; i++) {
-						ceros = ceros + "0";
-					}
-					Integer cantidad2 = guardarLoteDTO2.getCodigoOperacion().length();
-					Integer recorrer2 = 4 - cantidad2;
-					String ceros2 = "";
-					for (int i = 0; i < recorrer2; i++) {
-						ceros2 = ceros2 + "0";
-					}
-					cantidad = dataAdd.indexOf(guardarLoteDTO2) + 1;
-					String secuencia = this.agregarCeros(cantidad.toString().length(), 10, cantidad.toString(), "0");
-					String registroIdData = this.agregarCeros(guardarLoteDTO2.getId_lote().toString().length(), 15,
-							guardarLoteDTO2.getId_lote().toString(), "0");
-					String loteIdData = this.agregarCeros(guardarLoteDTO2.getId_lotefk().toString().length(), 15,
-							guardarLoteDTO2.getId_lotefk().toString(), "0");
-					String dia = date.format(DateTimeFormatter.ofPattern("dd"));
-					String mes = date.format(DateTimeFormatter.ofPattern("MM"));
-					String ano = date.format(DateTimeFormatter.ofPattern("yyyy"));
-					String digitoOrdenante = " ";
-					String ValidarCedula = "";
-					try {
-						if (guardarLoteDTO2.getNumeroCedula().contains("00000000000")) {
-							ValidarCedula = "N";
-						} else {
-							ValidarCedula = "S";
-						}
-					} catch (Exception e) {
-						e.printStackTrace();
-						if (!guardarLoteDTO2.getNumeroCedula().isEmpty()) {
-							ValidarCedula = "S";
-						} else {
-							ValidarCedula = "N";
-						}
-					}
-					String espacio1 = this.agregarCeros(" ".length(), 13, " ", " ");
-					String espacio2 = this.agregarCeros(" ".length(), 82, " ", " ");
-					String espacio3 = this.agregarCeros(" ".length(), 7, " ", " ");
-					mainframeData =
-							mainframeData + secuencia + registroIdData + loteIdData
-									+ guardarLoteDTO2.getReferencia().toString()
-									+ guardarLoteDTO2.getTipoMovimiento().toString() + dia + mes + ano
-									+ guardarLoteDTO2.getTipoDocumento().toString()
-									+ guardarLoteDTO2.getNumeroCedula().toString().replaceAll(" ", "") + digitoOrdenante
-									+ guardarLoteDTO2.getNumeroCuenta().toString()
-									+ guardarLoteDTO2.getSerialOperacion().toString()
-									+ this.agregarCeros(guardarLoteDTO2.getCodigoOperacion().toString().length(), 4,
-											guardarLoteDTO2.getCodigoOperacion().toString(), "0")
-									+ this.agregarCeros(guardarLoteDTO2.getMontoTransaccion().toString().length(), 17,
-											guardarLoteDTO2.getMontoTransaccion().toString(), "0")
-									+ " " + ValidarCedula + "01" + "Recuperacion por Incidencia"
-									+ this.agregarCeros(" ".length(), 48, " ", " ") + espacio3 + espacio1 + espacio2
-									+ "\r\n";
-				}
-				log.info("enviando la trama de datos a ftp:  ");
-				log.info(mainframeData);
-				byte[] textoDecomposed = (mainframeData).getBytes(StandardCharsets.UTF_8);
-				InputStream is = new ByteArrayInputStream(textoDecomposed);
-				try {
-					//AQUI ENVIAMOS LA TRAMA DE DATOS A MAINFRAME
-					ftpClient.storeFile("'VALT.GOFI.BAT1SBAS.GOJT0101.ENTRADA'", is);
-					log.info("codigo de respuesta  ftp al tratar de registrar VALT.GOFI.BAT1SBAS.GOJT0101.ENTRADA "
-							+ ftpClient.getReplyCode() +"El valor de ftpClient es : "+ ftpClient);
-					log.info("mensaje de respuesta  ftp al tratar de registrar VALT.GOFI.BAT1SBAS.GOJT0101.ENTRADA "
-							+ ftpClient.getReplyString());
-					if (ftpClient.getReplyCode() == 250) {
-						log.info("escritura correcta en el mainframe");
-						textoDecomposed = ("PROCESO COMPLETADO").getBytes(StandardCharsets.UTF_8);
-						is = new ByteArrayInputStream(textoDecomposed);
-						ftpClient.storeFile("'VALT.GOFI.BAT1SBAS.GOJT0101.FLAG'", is);
-						log.info("codigo de respuesta  ftp al tratar de registrar VALT.GOFI.BAT1SBAS.GOJT0101.FLAG "
-								+ ftpClient.getReplyCode());
-						log.info("mensaje de respuesta  ftp al tratar de registrar VALT.GOFI.BAT1SBAS.GOJT0101.FLAG "
-								+ ftpClient.getReplyString());
-						if (ftpClient.getReplyCode() == 250) {
-							log.info("Proceso ejecutado correctamente, procediendo a modificar los estados de los lotes y transacciones");
-							boolean loteOk = this.cambiarEstatusLoteMasivo("L", idLotes);
-							if (loteOk) {
-								boolean transaccionOk = this.cambiarEstatusTransaccionMasivo("L", idTransacciones);
-								if (transaccionOk) {
-									log.info("registrando englobador.");
-									boolean englobadorOk = this.registrarEngloobador(idLotes);
-									if (englobadorOk) {
-										String decripcionSeguimiento = "registro enviado a mainframe";
-										String codigoEmpleado = "async user";
-										String nomreEmpleado = "async user";
-										String apellidoEmpleado = "async user";
-										String cedulaEmpleado = "async user";
-										String codigoUnidad = "async user";
-										String descripcionUnidad = "async user";
-										String ipEmpleado = "async user";
-										boolean respuestaSeguimiento = this.guardarSeguimientoLista(
-												decripcionSeguimiento, codigoEmpleado, nomreEmpleado, apellidoEmpleado,
-												cedulaEmpleado, codigoUnidad, descripcionUnidad, ipEmpleado, idLotes);
-										if (respuestaSeguimiento) {
-											log.info("se logro registrar el segumiento, terminando proceso");
-										} else {
-											log.error("no se logro registrar el segumiento, terminando proceso");
-										}
-									}
-								} else {
-									log.error("existe un problema al registrar los estatus de las transacciones");
-								}
-							} else {
-								log.error("no fue posible registrar la data solicitada. ");
-							}
-						} else {
-							log.error("falla al escribir flag en el mainframe");
-							log.error("codigo de respuesta ftp " + ftpClient.getReplyCode());
-							log.error("mensaje de respuesta ftp " + ftpClient.getReplyString());
-						}
-					} else {
-						log.error("falla al escribir data en el mainframe");
-						log.error("codigo de respuesta ftp " + ftpClient.getReplyCode());
-						log.error("mensaje de respuesta ftp " + ftpClient.getReplyString());
-					}
-				} catch (Exception e) {
-					log.error("no fue posible ejecutar el proceso asincronico ", e);
-				}
+
+		return response;
+	}
+
+
+
+
+	public ResponseModel obtenerRespuestaDelProcedimiento(String idLotes) {
+		ResponseModel response = new ResponseModel();
+
+		try {
+			// Crear una instancia de SimpleJdbcCall
+			SimpleJdbcCall jdbcCall = new SimpleJdbcCall(jdbcTemplate);
+			jdbcCall.withProcedureName("PRC_OBTENER_DATA_MAINFRAME_ARRAY");
+			jdbcCall.withoutProcedureColumnMetaDataAccess();
+			jdbcCall.setFunction(false);
+			// Declarar los parámetros de salida y entrada
+			jdbcCall.declareParameters(
+					new SqlOutParameter("RESULTADO", OracleTypes.CURSOR),
+					new SqlParameter("P_ID_LOTE", OracleTypes.VARCHAR),
+					new SqlOutParameter("COD_RET", OracleTypes.VARCHAR),
+					new SqlOutParameter("DE_CODRET", OracleTypes.VARCHAR)
+			);
+
+			// Mapear el resultado del cursor a una lista de objetos
+			jdbcCall.returningResultSet("RESULTADO", new LoteRowMapper());
+
+			// Crear un mapa de parámetros de entrada
+			MapSqlParameterSource inputMap = new MapSqlParameterSource();
+			inputMap.addValue("P_ID_LOTE", idLotes);
+
+			log.info("Llamando al procedimiento con P_ID_LOTE: {}", idLotes);
+
+			// Ejecutar el procedimiento pasando el mapa de parámetros
+			Map<String, Object> resultMap = jdbcCall.execute(inputMap);
+			log.info("Resultado del procedimiento: {}", resultMap); // Log para depuración
+
+			// Obtener la lista de resultados mapeados
+			ArrayList<LoteDTO> resultados = (ArrayList<LoteDTO>) resultMap.get("RESULTADO");
+			log.info("Resultado del procedimiento: {}", resultados.stream()
+					.map(LoteDTO::toFormattedString) // Usamos el nuevo método
+					.collect(Collectors.joining("\n"))); // Juntamos los resultados
+			String codRetorno = (String) resultMap.get("COD_RET");
+			String descRetorno = (String) resultMap.get("DE_CODRET");
+
+			if (codRetorno.equals("1000")) {
+				response.setStatus(200);
+				response.setCode(Integer.parseInt(codRetorno));
+				response.setMessage(descRetorno);
+				response.setData(resultados);
 			} else {
-				log.info("fallo la conexion con el ftp");
+				response.setStatus(500);
+				response.setCode(9999);
+				response.setMessage("Error en la consulta");
 			}
-			try {
-				ftpClient.disconnect();
-				log.info("codigo de respuesta desconexion ftp " + ftpClient.getReplyCode());
-				log.info("mensaje de respuesta desconexion ftp " + ftpClient.getReplyString());
-			} catch (IOException ex) {
-				log.error("no fue posible la desconeccion con els ervidor ftp", ex);
-			}
-		} else {
-			log.info("no hay ejecucion en este ciclo horario");
 
+		} catch (Exception e) {
+			log.error(e.getMessage(), e);
+			response.setStatus(500);
+			response.setCode(9999);
+			response.setMessage("Error al consultar");
 		}
-		return null;
-	}*/
-	
-	
-	
-	
-	public ResponseModel obtenerLotesActivos() {  
-	    ResponseModel response = new ResponseModel();  
-	    String codRetorno;  
-	    String descRetorno;  
-	    String resultado = ""; // Inicializar como cadena vacía  
 
-	    try {  
-	        SimpleJdbcCall jdbcCall = new SimpleJdbcCall(jdbcTemplate);  
-	        //HAY QUE ANALIZAR SI SE VA A ENVIAR EL ID DE CADA LOTE O EL ID DE CADA TRANSACCION, ACTUALMENTE ENVIA EL ID DE CADA LOTE
-	        jdbcCall.withProcedureName("PRC_OBTENER_LOTES_ACTIVOS");  
-	        jdbcCall.withoutProcedureColumnMetaDataAccess();  
-	        jdbcCall.setFunction(false);  
-	        jdbcCall.declareParameters(  
-	            new SqlOutParameter("RESULTADO", OracleTypes.VARCHAR), // Cambiar a VARCHAR2  
-	            new SqlOutParameter("COD_RET", OracleTypes.VARCHAR),  
-	            new SqlOutParameter("DE_CODRET", OracleTypes.VARCHAR)  
-	        );  
-
-	        // Ejecutar el procedimiento sin parámetros de entrada  
-	        Map<String, Object> resultMap = jdbcCall.execute();  
-	        
-	        // Obtener el resultado como String  
-	        resultado = (String) resultMap.get("RESULTADO");  
-	        
-	        // Obtener los códigos de retorno  
-	        codRetorno = (String) resultMap.get("COD_RET");  
-	        descRetorno = (String) resultMap.get("DE_CODRET");  
-
-	        log.info("Resultado del procedimiento: Código = {}, Descripción = {}, Resultado = {}", codRetorno, descRetorno, resultado);  
-	        
-	        // Configurar la respuesta exitosa  
-	        response.setCode(Integer.parseInt(codRetorno));  
-	        response.setMessage(descRetorno);  
-	        response.setStatus(200);  
-	        response.setData(resultado); // Almacenar el resultado como String  
-	    } catch (Exception e) {  
-	        log.error("Error al ejecutar el procedimiento", e);  
-	        response.setCode(9999);   
-	        response.setMessage("Error al ejecutar el procedimiento: " + e.getMessage());  
-	        response.setStatus(500);  
-	    }  
-
-	    return response;  
-	}
-	
-	
-	
-	
-	public ResponseModel obtenerRespuestaDelProcedimiento(String idLotes) {  
-	    ResponseModel response = new ResponseModel();  
-
-	    try {  
-	        // Crear una instancia de SimpleJdbcCall  
-	        SimpleJdbcCall jdbcCall = new SimpleJdbcCall(jdbcTemplate);  
-	        jdbcCall.withProcedureName("PRC_OBTENER_DATA_MAINFRAME_ARRAY");  
-	        jdbcCall.withoutProcedureColumnMetaDataAccess();  
-	        jdbcCall.setFunction(false);      
-	        // Declarar los parámetros de salida y entrada  
-	        jdbcCall.declareParameters(  
-	            new SqlOutParameter("RESULTADO", OracleTypes.CURSOR),  
-	            new SqlParameter("P_ID_LOTE", OracleTypes.VARCHAR),  
-	            new SqlOutParameter("COD_RET", OracleTypes.VARCHAR),  
-	            new SqlOutParameter("DE_CODRET", OracleTypes.VARCHAR)  
-	        );  
-
-	        // Mapear el resultado del cursor a una lista de objetos  
-	        jdbcCall.returningResultSet("RESULTADO", new LoteRowMapper());  
-
-	        // Crear un mapa de parámetros de entrada  
-	        MapSqlParameterSource inputMap = new MapSqlParameterSource();  
-	        inputMap.addValue("P_ID_LOTE", idLotes);  
-	        
-	        log.info("Llamando al procedimiento con P_ID_LOTE: {}", idLotes);  
-	        
-	        // Ejecutar el procedimiento pasando el mapa de parámetros  
-	        Map<String, Object> resultMap = jdbcCall.execute(inputMap);  
-	        log.info("Resultado del procedimiento: {}", resultMap); // Log para depuración  
-	                
-	        // Obtener la lista de resultados mapeados  
-	        ArrayList<LoteDTO> resultados = (ArrayList<LoteDTO>) resultMap.get("RESULTADO");  
-	        log.info("Resultado del procedimiento: {}", resultados.stream()  
-	        	    .map(LoteDTO::toFormattedString) // Usamos el nuevo método  
-	        	    .collect(Collectors.joining("\n"))); // Juntamos los resultados
-	        String codRetorno = (String) resultMap.get("COD_RET");  
-	        String descRetorno = (String) resultMap.get("DE_CODRET");  
-
-	        if (codRetorno.equals("1000")) {
-	            response.setStatus(200);
-	            response.setCode(Integer.parseInt(codRetorno));
-	            response.setMessage(descRetorno);
-	            response.setData(resultados);
-	        } else {
-	            response.setStatus(500);
-	            response.setCode(9999);
-	            response.setMessage("Error en la consulta");
-	        }
-
-	    } catch (Exception e) {
-	        log.error(e.getMessage(), e);
-	        response.setStatus(500);
-	        response.setCode(9999);
-	        response.setMessage("Error al consultar");
-	    }
-
-	    return response;
+		return response;
 	}
 
-	
-	public ResponseModel actualizarEstadoRegistro(String idLotes, String estadoRegistro) {  
-	    ResponseModel response = new ResponseModel();  
 
-	    try {  
-	        // Crear una instancia de SimpleJdbcCall  
-	        SimpleJdbcCall jdbcCall = new SimpleJdbcCall(jdbcTemplate);  
-	        jdbcCall.withProcedureName("PRC_ACTUALIZAR_ESTADO_REGISTRO");  
-	        jdbcCall.withoutProcedureColumnMetaDataAccess();  
-	        jdbcCall.setFunction(false);  
-	        
-	        // Declarar los parámetros de entrada y salida  
-	        jdbcCall.declareParameters(  
-	            new SqlParameter("P_ID_LOTE", OracleTypes.VARCHAR),  
-	            new SqlParameter("P_ESTADO_REGISTRO", OracleTypes.VARCHAR),  // Nuevo parámetro  
-	            new SqlOutParameter("COD_RET", OracleTypes.VARCHAR),  
-	            new SqlOutParameter("DE_CODRET", OracleTypes.VARCHAR)  
-	        );  
+	public ResponseModel actualizarEstadoRegistro(String idLotes, String estadoRegistro) {
+		ResponseModel response = new ResponseModel();
 
-	        // Crear un mapa de parámetros de entrada  
-	        MapSqlParameterSource inputMap = new MapSqlParameterSource();  
-	        inputMap.addValue("P_ID_LOTE", idLotes);  
-	        inputMap.addValue("P_ESTADO_REGISTRO", estadoRegistro);  // Agregar el valor del estado  
-	        
-	        log.info("Llamando al procedimiento con P_ID_LOTE: {} y P_ESTADO_REGISTRO: {}", idLotes, estadoRegistro);  
+		try {
+			// Crear una instancia de SimpleJdbcCall
+			SimpleJdbcCall jdbcCall = new SimpleJdbcCall(jdbcTemplate);
+			jdbcCall.withProcedureName("PRC_ACTUALIZAR_ESTADO_REGISTRO");
+			jdbcCall.withoutProcedureColumnMetaDataAccess();
+			jdbcCall.setFunction(false);
 
-	        // Ejecutar el procedimiento pasando el mapa de parámetros  
-	        Map<String, Object> resultMap = jdbcCall.execute(inputMap);  
-	        log.info("Resultado del procedimiento: {}", resultMap); // Log para depuración  
+			// Declarar los parámetros de entrada y salida
+			jdbcCall.declareParameters(
+					new SqlParameter("P_ID_LOTE", OracleTypes.VARCHAR),
+					new SqlParameter("P_ESTADO_REGISTRO", OracleTypes.VARCHAR),  // Nuevo parámetro
+					new SqlOutParameter("COD_RET", OracleTypes.VARCHAR),
+					new SqlOutParameter("DE_CODRET", OracleTypes.VARCHAR)
+			);
 
-	        // Obtener los valores de los parámetros de salida  
-	        String codRetorno = (String) resultMap.get("COD_RET");  
-	        String descRetorno = (String) resultMap.get("DE_CODRET");  
+			// Crear un mapa de parámetros de entrada
+			MapSqlParameterSource inputMap = new MapSqlParameterSource();
+			inputMap.addValue("P_ID_LOTE", idLotes);
+			inputMap.addValue("P_ESTADO_REGISTRO", estadoRegistro);  // Agregar el valor del estado
 
-	        // Configurar la respuesta  
-	        if (codRetorno.equals("1000")) {  
-	            response.setStatus(200);  
-	            response.setCode(Integer.parseInt(codRetorno));  
-	            response.setMessage(descRetorno);  
-	        } else {  
-	            response.setStatus(500);  
-	            response.setCode(9999);  
-	            response.setMessage(descRetorno); // Puedes modificar el mensaje si deseas  
-	        }  
+			log.info("Llamando al procedimiento con P_ID_LOTE: {} y P_ESTADO_REGISTRO: {}", idLotes, estadoRegistro);
 
-	    } catch (Exception e) {  
-	        log.error(e.getMessage(), e);  
-	        response.setStatus(500);  
-	        response.setCode(9999);  
-	        response.setMessage("Error al actualizar el estado del registro");  
-	    }  
+			// Ejecutar el procedimiento pasando el mapa de parámetros
+			Map<String, Object> resultMap = jdbcCall.execute(inputMap);
+			log.info("Resultado del procedimiento: {}", resultMap); // Log para depuración
 
-	    return response;  
+			// Obtener los valores de los parámetros de salida
+			String codRetorno = (String) resultMap.get("COD_RET");
+			String descRetorno = (String) resultMap.get("DE_CODRET");
+
+			// Configurar la respuesta
+			if (codRetorno.equals("1000")) {
+				response.setStatus(200);
+				response.setCode(Integer.parseInt(codRetorno));
+				response.setMessage(descRetorno);
+			} else {
+				response.setStatus(500);
+				response.setCode(9999);
+				response.setMessage(descRetorno); // Puedes modificar el mensaje si deseas
+			}
+
+		} catch (Exception e) {
+			log.error(e.getMessage(), e);
+			response.setStatus(500);
+			response.setCode(9999);
+			response.setMessage("Error al actualizar el estado del registro");
+		}
+
+		return response;
 	}
-	
-	
-	
-	public ResponseModel actualizarEstadoLoteFTP(String idLotes, String estadoRegistro) {  
-	    ResponseModel response = new ResponseModel();  
 
-	    try {  
-	        SimpleJdbcCall jdbcCall = new SimpleJdbcCall(jdbcTemplate)  
-	            .withProcedureName("PRC_ACTUALIZAR_ESTADO_LOTE_FTP")  
-	            .declareParameters(  
-	                new SqlParameter("P_ID_LOTE", OracleTypes.VARCHAR),  
-	                new SqlParameter("P_ESTADO_REGISTRO", OracleTypes.VARCHAR),  
-	                new SqlOutParameter("COD_RET", OracleTypes.VARCHAR),  
-	                new SqlOutParameter("DE_CODRET", OracleTypes.VARCHAR)  
-	            );  
 
-	        MapSqlParameterSource params = new MapSqlParameterSource()  
-	            .addValue("P_ID_LOTE", idLotes)  
-	            .addValue("P_ESTADO_REGISTRO", estadoRegistro);  
 
-	        Map<String, Object> result = jdbcCall.execute(params);  
+	public ResponseModel actualizarEstadoLoteFTP(String idLotes, String estadoRegistro) {
+		ResponseModel response = new ResponseModel();
 
-	        String codRet = (String) result.get("COD_RET");  
-	        String mensaje = (String) result.get("DE_CODRET");  
+		try {
+			SimpleJdbcCall jdbcCall = new SimpleJdbcCall(jdbcTemplate)
+					.withProcedureName("PRC_ACTUALIZAR_ESTADO_LOTE_FTP")
+					.declareParameters(
+							new SqlParameter("P_ID_LOTE", OracleTypes.VARCHAR),
+							new SqlParameter("P_ESTADO_REGISTRO", OracleTypes.VARCHAR),
+							new SqlOutParameter("COD_RET", OracleTypes.VARCHAR),
+							new SqlOutParameter("DE_CODRET", OracleTypes.VARCHAR)
+					);
 
-	        if ("1000".equals(codRet)) {  
-	            response.setStatus(200);  
-	            response.setMessage(mensaje);  
-	        } else {  
-	            response.setStatus(500);  
-	            response.setMessage("Error: " + mensaje);  
-	        }  
+			MapSqlParameterSource params = new MapSqlParameterSource()
+					.addValue("P_ID_LOTE", idLotes)
+					.addValue("P_ESTADO_REGISTRO", estadoRegistro);
 
-	    } catch (Exception e) {  
-	        log.error("Error al actualizar estado vía FTP", e);  
-	        response.setStatus(500);  
-	        response.setMessage("Error interno: " + e.getMessage());  
-	    }  
+			Map<String, Object> result = jdbcCall.execute(params);
 
-	    return response;  
+			String codRet = (String) result.get("COD_RET");
+			String mensaje = (String) result.get("DE_CODRET");
+
+			if ("1000".equals(codRet)) {
+				response.setStatus(200);
+				response.setMessage(mensaje);
+			} else {
+				response.setStatus(500);
+				response.setMessage("Error: " + mensaje);
+			}
+
+		} catch (Exception e) {
+			log.error("Error al actualizar estado vía FTP", e);
+			response.setStatus(500);
+			response.setMessage("Error interno: " + e.getMessage());
+		}
+
+		return response;
 	}
-	
+
 	//ESTE ES PARA ACTUALIZAR DIARIAMENTE TODOS LOS LOTES EN ESTADO A Y W
 	public ResponseModel actualizarEstadosPorFecha() {
-	    ResponseModel response = new ResponseModel();
-	    log.info("Hora actual del servidor: {}", LocalDateTime.now());
-	    log.info("Zona horaria del servidor: {}", ZoneId.systemDefault());
-	    try {
-	        SimpleJdbcCall jdbcCall = new SimpleJdbcCall(jdbcTemplate)
-	                .withProcedureName("PRC_ACTUALIZAR_ESTADOS_POR_FECHA")
-	                .declareParameters(
-	                        new SqlOutParameter("COD_RET", OracleTypes.VARCHAR),
-	                        new SqlOutParameter("DE_CODRET", OracleTypes.VARCHAR)
-	                );
+		ResponseModel response = new ResponseModel();
+		log.info("Hora actual del servidor: {}", LocalDateTime.now());
+		log.info("Zona horaria del servidor: {}", ZoneId.systemDefault());
+		try {
+			SimpleJdbcCall jdbcCall = new SimpleJdbcCall(jdbcTemplate)
+					.withProcedureName("PRC_ACTUALIZAR_ESTADOS_POR_FECHA")
+					.declareParameters(
+							new SqlOutParameter("COD_RET", OracleTypes.VARCHAR),
+							new SqlOutParameter("DE_CODRET", OracleTypes.VARCHAR)
+					);
 
-	        // No hay parámetros de entrada, se pasa un Map vacío
-	        MapSqlParameterSource inputMap = new MapSqlParameterSource();
-	        
-	        Map<String, Object> resultMap = jdbcCall.execute(inputMap);
-	        
-	        String codRetorno = (String) resultMap.get("COD_RET");
-	        String descRetorno = (String) resultMap.get("DE_CODRET");
-	        
-	        log.info("Resultado => CodRet: {}, DescRet: {}", codRetorno, descRetorno);
-	        log.info("Resultado de la actualización diaria: {}", descRetorno);
-	        if ("1000".equals(codRetorno)) {
-	            response.setCode(Integer.parseInt(codRetorno));
-	            response.setStatus(200);
-	            response.setMessage(descRetorno);
-	        } else {
-	            response.setCode(1001); // Código genérico para errores de negocio
-	            response.setStatus(500);
-	            response.setMessage("Error al actualizar estados: " + descRetorno);
-	        }
-	        return response;
-	        
-	    } catch (Exception e) {
-	        log.error("Error en PRC_ACTUALIZAR_ESTADOS_POR_FECHA: ", e);
-	        response.setCode(9999);
-	        response.setMessage("Error interno al ejecutar el procedimiento: " + e.getMessage());
-	        response.setStatus(500);
-	        return response;
-	    }
+			// No hay parámetros de entrada, se pasa un Map vacío
+			MapSqlParameterSource inputMap = new MapSqlParameterSource();
+
+			Map<String, Object> resultMap = jdbcCall.execute(inputMap);
+
+			String codRetorno = (String) resultMap.get("COD_RET");
+			String descRetorno = (String) resultMap.get("DE_CODRET");
+
+			log.info("Resultado => CodRet: {}, DescRet: {}", codRetorno, descRetorno);
+			log.info("Resultado de la actualización diaria: {}", descRetorno);
+			if ("1000".equals(codRetorno)) {
+				response.setCode(Integer.parseInt(codRetorno));
+				response.setStatus(200);
+				response.setMessage(descRetorno);
+			} else {
+				response.setCode(1001); // Código genérico para errores de negocio
+				response.setStatus(500);
+				response.setMessage("Error al actualizar estados: " + descRetorno);
+			}
+			return response;
+
+		} catch (Exception e) {
+			log.error("Error en PRC_ACTUALIZAR_ESTADOS_POR_FECHA: ", e);
+			response.setCode(9999);
+			response.setMessage("Error interno al ejecutar el procedimiento: " + e.getMessage());
+			response.setStatus(500);
+			return response;
+		}
 	}
-	
+
 	public ResponseModel actualizarRespuestaMainframe2(Long idLoteGiomPk) {
-	    ResponseModel response = new ResponseModel();
+		ResponseModel response = new ResponseModel();
 
-	    try {
-	        SimpleJdbcCall jdbcCall = new SimpleJdbcCall(jdbcTemplate)
-	            .withProcedureName("PRC_ACTUALIZAR_RESPUESTA_MAINFRAME2")
-	            .declareParameters(
-	                new SqlParameter("P_ID_LOTE_GIOM_PK", OracleTypes.NUMERIC),
-	                new SqlOutParameter("COD_RET", OracleTypes.VARCHAR),
-	                new SqlOutParameter("DE_RET", OracleTypes.VARCHAR)
-	            );
+		try {
+			SimpleJdbcCall jdbcCall = new SimpleJdbcCall(jdbcTemplate)
+					.withProcedureName("PRC_ACTUALIZAR_RESPUESTA_MAINFRAME2")
+					.declareParameters(
+							new SqlParameter("P_ID_LOTE_GIOM_PK", OracleTypes.NUMERIC),
+							new SqlOutParameter("COD_RET", OracleTypes.VARCHAR),
+							new SqlOutParameter("DE_RET", OracleTypes.VARCHAR)
+					);
 
-	        MapSqlParameterSource inputMap = new MapSqlParameterSource();
-	        inputMap.addValue("P_ID_LOTE_GIOM_PK", idLoteGiomPk);
+			MapSqlParameterSource inputMap = new MapSqlParameterSource();
+			inputMap.addValue("P_ID_LOTE_GIOM_PK", idLoteGiomPk);
 
-	        log.info("Llamando al procedimiento con P_ID_LOTE_GIOM_PK: {}", idLoteGiomPk);
+			log.info("Llamando al procedimiento con P_ID_LOTE_GIOM_PK: {}", idLoteGiomPk);
 
-	        Map<String, Object> resultMap = jdbcCall.execute(inputMap);
-	        log.info("Resultado del procedimiento: {}", resultMap);
+			Map<String, Object> resultMap = jdbcCall.execute(inputMap);
+			log.info("Resultado del procedimiento: {}", resultMap);
 
-	        String codRetorno = (String) resultMap.get("COD_RET");
-	        String descRetorno = (String) resultMap.get("DE_RET");
+			String codRetorno = (String) resultMap.get("COD_RET");
+			String descRetorno = (String) resultMap.get("DE_RET");
 
-	        if ("1000".equals(codRetorno)) {
-	            response.setStatus(200);
-	            response.setCode(Integer.parseInt(codRetorno));
-	            response.setMessage(descRetorno);
-	        } else {
-	            response.setStatus(500);
-	            response.setCode(9999);
-	            response.setMessage(descRetorno);
-	        }
+			if ("1000".equals(codRetorno)) {
+				response.setStatus(200);
+				response.setCode(Integer.parseInt(codRetorno));
+				response.setMessage(descRetorno);
+			} else {
+				response.setStatus(500);
+				response.setCode(9999);
+				response.setMessage(descRetorno);
+			}
 
-	    } catch (Exception e) {
-	        log.error("Error al actualizar respuesta mainframe: ", e);
-	        response.setStatus(500);
-	        response.setCode(9999);
-	        response.setMessage("Error al procesar lote en mainframe");
-	    }
+		} catch (Exception e) {
+			log.error("Error al actualizar respuesta mainframe: ", e);
+			response.setStatus(500);
+			response.setCode(9999);
+			response.setMessage("Error al procesar lote en mainframe");
+		}
 
-	    return response;
+		return response;
+	}
+
+
+
+
+	// Almacenamiento de logs
+	private static final int MAX_LOG_ENTRIES = 1000;
+	// Cambia a esto (elimina synchronized y usa CopyOnWriteArrayList)
+	private final List<String> logs = new CopyOnWriteArrayList<>();
+
+	public void addLog(String format, Object... args) {
+		String logEntry = String.format(format.replace("{}", "%s"), args);
+		logs.add(logEntry);
+		if (logs.size() > MAX_LOG_ENTRIES) {
+			logs.remove(0);
+		}
+	}
+
+	public synchronized List<String> getLogs() {
+		return new ArrayList<>(logs);
 	}
 	
-
+	
+	
 	@Scheduled(cron = "0 0/30 * * * *")  // Se ejecuta cada 30 minutos
 	public ResponseModel ejecutarFtp() {
-		// Reiniciar el contador antes de procesar los lotes
-		LoteDTO.resetContador(); // <--- Aquí se resetea
-	    log.info("Iniciando el proceso asincrónico de mainframe automáticamente");
+	    // Reiniciar el contador antes de procesar los lotes
+	    LoteDTO.resetContador();
+	    addLog("Iniciando el proceso asincrónico de mainframe automáticamente");
 	    
 	    // 0. Siempre actualizar estados por fecha primero
-	    log.info("Actualizando estados por fecha...");
+	    addLog("Actualizando estados por fecha...");
 	    ResponseModel estadoResponse = this.actualizarEstadosPorFecha();
 	    if (estadoResponse.getStatus() != 200) {
-	        log.error("Error al actualizar estados por fecha: {}", estadoResponse.getMessage());
+	        addLog("Error al actualizar estados por fecha: {}", estadoResponse.getMessage());
 	    } else {
-	    	//PARA ACTUALIZAR TODOS LOS LOTES EN ESTADO A Y W DE ACUERDO A SU FECHA DE VENCIMIENTO
-	        log.info("Actualización de estados por fecha completada: {}", estadoResponse.getMessage());
+	        addLog("Actualización de estados por fecha completada: {}", estadoResponse.getMessage());
 	    }
 
 	    // 1. Verificar si hay lotes activos (estado 'L')
@@ -2565,7 +2390,7 @@ public class GiomDao {
 
 	    // 2. Validar horario configurado
 	    if (ejecutado) {
-	        log.info("Iniciando validación de horario...");
+	        addLog("Iniciando validación de horario...");
 	        ejecutado = false; // Reiniciar antes de validar horas
 	        
 	        ConsultarConfiguarcionDTO horaData = new ConsultarConfiguarcionDTO();
@@ -2578,15 +2403,15 @@ public class GiomDao {
 	            if (horasData != null && !horasData.isEmpty()) {
 	                // Usar la zona horaria correcta (ej: "America/Caracas")
 	                LocalTime horaActual = LocalTime.now(ZoneId.of("America/Caracas"));
-	                log.info("Hora actual: {}", horaActual.format(DateTimeFormatter.ofPattern("HH:mm")));
+	                addLog("Hora actual: {}", horaActual.format(DateTimeFormatter.ofPattern("HH:mm")));
 	                
 	                for (ParametrosDTO parametrosDTO : horasData) {
 	                    if (parametrosDTO.getEstado() == 1) { // Solo horas activas
 	                        LocalTime horaConfigurada = LocalTime.parse(parametrosDTO.getValorConfigurado());
-	                        log.debug("Validando hora: {}", horaConfigurada);
+	                        addLog("Validando hora: {}", horaConfigurada);
 	                        
 	                        if (horaConfigurada.getHour() == horaActual.getHour()) {
-	                            log.warn("¡Ejecución permitida! Coincidencia con hora: {}", 
+	                            addLog("¡Ejecución permitida! Coincidencia con hora: {}", 
 	                                horaConfigurada.format(DateTimeFormatter.ofPattern("HH:mm")));
 	                            ejecutado = true;
 	                            break; // Salir al encontrar coincidencia
@@ -2595,154 +2420,172 @@ public class GiomDao {
 	                }
 	            }
 	        } else {
-	            log.error("Error al consultar horas configuradas: {}", dataHoraSalida.getMessage());
+	            addLog("Error al consultar horas configuradas: {}", dataHoraSalida.getMessage());
 	        }
-	        log.info("Resultado de validación de horas: {}", ejecutado);
+	        addLog("Resultado de validación de horas: {}", ejecutado);
 	    }
-		
-		
-		
-		if (ejecutado) {
+	    
+	    if (ejecutado) {
+	        // Llamar al método obtenerLotesActivos para obtener los valores
+	        ResponseModel lotesActivosResponse = obtenerLotesActivos();
+	        String valores = (String) lotesActivosResponse.getData(); // Obtener el resultado como String
 
-			// Llamar al método obtenerLotesActivos para obtener los valores
-			ResponseModel lotesActivosResponse = obtenerLotesActivos();
-			String valores = (String) lotesActivosResponse.getData(); // Obtener el resultado como String
+	        if (valores == null || valores.isEmpty()) {
+	            addLog("No se obtuvieron IDs de lotes activos.");
+	            return null;
+	        }
 
-			if (valores == null || valores.isEmpty()) {
-				log.error("No se obtuvieron IDs de lotes activos.");
-				return null;
-			}
+	        String[] idLotesArray = valores.split(","); // Suponiendo que los IDs están separados por comas
+	        StringBuilder resultadoFinal = new StringBuilder();
 
-			String[] idLotesArray = valores.split(","); // Suponiendo que los IDs están separados por comas
-			StringBuilder resultadoFinal = new StringBuilder();
+	        for (String idLote : idLotesArray) {
+	            ResponseModel respuestaProcedimiento = obtenerRespuestaDelProcedimiento(idLote.trim());
 
-			for (String idLote : idLotesArray) {
-				ResponseModel respuestaProcedimiento = obtenerRespuestaDelProcedimiento(idLote.trim());
+	            if (respuestaProcedimiento.getStatus() == 200) {
+	                // Obtener la lista de LoteDTO
+	                List<LoteDTO> resultados = (List<LoteDTO>) respuestaProcedimiento.getData();
+	                // Convertir la lista de LoteDTO a un String
+	                for (LoteDTO lote : resultados) {
+	                    resultadoFinal.append(lote.toFormattedString()).append("\n");
+	                }
+	            } else {
+	                addLog("Error al obtener respuesta para el lote: {}", idLote);
+	            }
+	        }
 
-				if (respuestaProcedimiento.getStatus() == 200) {
-					// Obtener la lista de LoteDTO
-					List<LoteDTO> resultados = (List<LoteDTO>) respuestaProcedimiento.getData();
-					// Convertir la lista de LoteDTO a un String
-					for (LoteDTO lote : resultados) {
-						// Aquí debes definir cómo quieres convertir cada LoteDTO a String
-						resultadoFinal.append(lote.toFormattedString()).append("\n");
-					}
-				} else {
-					log.error("Error al obtener respuesta para el lote: {}", idLote);
-				}
-			}
+	        String resultado = resultadoFinal.toString(); // Convertir el StringBuilder a String
 
-			String resultado = resultadoFinal.toString(); // Convertir el StringBuilder a String
+	        if (resultado.isEmpty()) {
+	            addLog("No se obtuvieron datos del procedimiento, resultado es null o vacío.");
+	            return null;
+	        }
 
-			if (resultado.isEmpty()) {
-				log.error("No se obtuvieron datos del procedimiento, resultado es null o vacío.");
-				return null;
-			}
+	        addLog("Resultado del procedimiento: {}", resultado);
+	        addLog("Se inicia el proceso de consulta de base de datos para determinar la data de envío");
+	        addLog("Iniciando proceso");
+	        FTPClient ftpClient = null;
+	        ConsultarConfiguarcionDTO datos = new ConsultarConfiguarcionDTO();
 
-			log.info("Resultado del procedimiento: {}", resultado);
+	        // Obtener configuración del host FTP
+	        datos.setDescriptor("FH");
+	        List<ParametrosDTO> parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();
+	        String host = parametrosPivot.get(0).getValorConfigurado();
 
-			log.info("Se inicia el proceso de consulta de base de datos para determinar la data de envío");
-			log.info("Iniciando proceso");
-			FTPClient ftpClient = null;
-			ConsultarConfiguarcionDTO datos = new ConsultarConfiguarcionDTO();
+	        // Obtener configuración de la contraseña
+	        datos.setDescriptor("FP");
+	        parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();
+	        String password = parametrosPivot.get(0).getValorConfigurado();
 
-			// Obtener configuración del host FTP
-			datos.setDescriptor("FH");
-			List<ParametrosDTO> parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();
-			String host = parametrosPivot.get(0).getValorConfigurado();
+	        // Obtener configuración del usuario
+	        datos.setDescriptor("FU");
+	        parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();
+	        String usuario = parametrosPivot.get(0).getValorConfigurado();
 
-			// Obtener configuración de la contraseña
-			datos.setDescriptor("FP");
-			parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();
-			String password = parametrosPivot.get(0).getValorConfigurado();
+	        addLog("Iniciando consulta de documentos XML en el servidor FTP");
+	        addLog("Host FTP: \r\n {} \r\n Contraseña de directorio remoto: {} \r\n Usuario: {}", host, password, usuario);
+	        addLog("Iniciando conexión");
 
-			// Obtener configuración del usuario
-			datos.setDescriptor("FU");
-			parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();
-			String usuario = parametrosPivot.get(0).getValorConfigurado();
+	        ftpClient = FtpUtil.getFTPClient(host, 21, usuario, password);
 
-			log.info("Iniciando consulta de documentos XML en el servidor FTP");
-			log.info("Host FTP: \r\n " + host + " \r\n Contraseña de directorio remoto: " + password + " \r\n Usuario: " + usuario);
-			log.info("Iniciando conexión");
+	        if (ftpClient.isConnected()) {
+	            addLog("Conexión establecida correctamente con el FTP");
+	            byte[] textoDecomposed = resultado.getBytes(StandardCharsets.UTF_8);
+	            
+	            // NUEVO: Log tamaño archivo ENTRADA
+	            int tamanioEntrada = textoDecomposed.length;
+	            addLog("Tamaño archivo ENTRADA a enviar: %d bytes", tamanioEntrada);
+	            
+	            InputStream is = new ByteArrayInputStream(textoDecomposed);
 
-			ftpClient = FtpUtil.getFTPClient(host, 21, usuario, password);
+	            try {
+	                boolean success = ftpClient.storeFile("'VALP.GOFI.BAT1SBAS.GOJP0101.ENTRADA'", is);
+	                
+	             // NUEVO: Log después de enviar (verifica bytes transferidos)
+	                int bytesTransferidos = textoDecomposed.length - is.available();
+	                addLog("Bytes transferidos para ENTRADA: %d/%d", bytesTransferidos, tamanioEntrada);
+	                
+	                
+	                addLog("Código de respuesta FTP al tratar de registrar VALP.GOFI.BAT1SBAS.GOJP0101.ENTRADA %s El valor de ftpClient es : %s", 
+	                      ftpClient.getReplyCode(), ftpClient);
+	                addLog("Mensaje de respuesta FTP al tratar de registrar VALP.GOFI.BAT1SBAS.GOJP0101.ENTRADA %s", 
+	                      ftpClient.getReplyString());
 
-			if (ftpClient.isConnected()) {
-				log.info("Conexión establecida correctamente con el FTP");
-				byte[] textoDecomposed = resultado.getBytes(StandardCharsets.UTF_8);
-				InputStream is = new ByteArrayInputStream(textoDecomposed);
+	                if (success && ftpClient.getReplyCode() == 250) {
+	                    addLog("Escritura correcta en el mainframe");
+	                    byte[] flagDecomposed = "PROCESO COMPLETADO".getBytes(StandardCharsets.UTF_8);
+	                    
+	                 // NUEVO: Log tamaño archivo FLAG
+	                    int tamanioFlag = flagDecomposed.length;
+	                    addLog("Tamaño archivo FLAG a enviar: %d bytes", tamanioFlag);
+	                    
+	                    InputStream flagStream = new ByteArrayInputStream(flagDecomposed);
+	                    success = ftpClient.storeFile("'VALP.GOFI.BAT1SBAS.GOJP0101.FLAG'", flagStream);
+	                    
+	                 // NUEVO: Log después de enviar FLAG
+	                    bytesTransferidos = flagDecomposed.length - flagStream.available();
+	                    addLog("Bytes transferidos para FLAG: %d/%d", bytesTransferidos, tamanioFlag);
+	                    
+	                    addLog("Código de respuesta FTP al tratar de registrar VALP.GOFI.BAT1SBAS.GOJP0101.FLAG %s", 
+	                          ftpClient.getReplyCode());
+	                    addLog("Mensaje de respuesta FTP al tratar de registrar VALP.GOFI.BAT1SBAS.GOJP0101.FLAG %s", 
+	                          ftpClient.getReplyString());
 
-				try {
-					boolean success = ftpClient.storeFile("'VALT.GOFI.BAT1SBAS.GOJT0101.ENTRADA'", is);
-					log.info("Código de respuesta FTP al tratar de registrar VALT.GOFI.BAT1SBAS.GOJT0101.ENTRADA "
-							+ ftpClient.getReplyCode() + " El valor de ftpClient es : " + ftpClient);
-					log.info("Mensaje de respuesta FTP al tratar de registrar VALT.GOFI.BAT1SBAS.GOJT0101.ENTRADA "
-							+ ftpClient.getReplyString());
+	                    if (success && ftpClient.getReplyCode() == 250) {  
+	                        addLog("Proceso ejecutado correctamente, actualizando estados...");  
 
-					if (success && ftpClient.getReplyCode() == 250) {
-						log.info("Escritura correcta en el mainframe");
-						byte[] flagDecomposed = "PROCESO COMPLETADO".getBytes(StandardCharsets.UTF_8);
-						InputStream flagStream = new ByteArrayInputStream(flagDecomposed);
-						success = ftpClient.storeFile("'VALT.GOFI.BAT1SBAS.GOJT0101.FLAG'", flagStream);
-						log.info("Código de respuesta FTP al tratar de registrar VALT.GOFI.BAT1SBAS.GOJT0101.FLAG "
-								+ ftpClient.getReplyCode());
-						log.info("Mensaje de respuesta FTP al tratar de registrar VALT.GOFI.BAT1SBAS.GOJT0101.FLAG "
-								+ ftpClient.getReplyString());
+	                        ArrayList<LoteMainframe> listaLotesEjecutar = this.consultarListaLotesMainframe();  
+	                        List<String> idLotes = listaLotesEjecutar.stream()  
+	                            .map(LoteMainframe::getIdlote)  
+	                            .collect(Collectors.toList());  
 
-						if (success && ftpClient.getReplyCode() == 250) {  
-						    log.info("Proceso ejecutado correctamente, actualizando estados...");  
+	                        // Convertir lista a String separado por comas
+	                        String idLotesStr = String.join(",", idLotes);  
 
-						    ArrayList<LoteMainframe> listaLotesEjecutar = this.consultarListaLotesMainframe();  
-						    List<String> idLotes = listaLotesEjecutar.stream()  
-						        .map(LoteMainframe::getIdlote)  
-						        .collect(Collectors.toList());  
+	                        // Llamar al nuevo método
+	                        ResponseModel response = this.actualizarEstadoLoteFTP(idLotesStr, "L");  
 
-						    // Convertir lista a String separado por comas
-						    String idLotesStr = String.join(",", idLotes);  
+	                        if (response.getStatus() == 200) {  
+	                            addLog("Estados actualizados exitosamente");  
+	                        } else {  
+	                            addLog("Error al actualizar estados: {}", response.getMessage());  
+	                        }  
+	                    } else {
+	                        addLog("Falla al escribir flag en el mainframe");
+	                        addLog("Código de respuesta FTP %s", ftpClient.getReplyCode());
+	                        addLog("Mensaje de respuesta FTP %s", ftpClient.getReplyString());
+	                    }
+	                } else {
+	                    addLog("Falla al escribir data en el mainframe");
+	                    addLog("Código de respuesta FTP %s", ftpClient.getReplyCode());
+	                    addLog("Mensaje de respuesta FTP %s", ftpClient.getReplyString());
+	                }
+	            } catch (Exception e) {
+	                addLog("No fue posible ejecutar el proceso asincrónico: %s", e.getMessage());
+	            } finally {
+	                try {
+	                    is.close();
+	                } catch (IOException e) {
+	                    addLog("Error al cerrar el InputStream: %s", e.getMessage());
+	                }
+	            }
+	        } else {
+	            addLog("Falló la conexión con el FTP");
+	        }
 
-						    // Llamar al nuevo método
-						    ResponseModel response = this.actualizarEstadoLoteFTP(idLotesStr, "L");  
-
-						    if (response.getStatus() == 200) {  
-						        log.info("Estados actualizados exitosamente");  
-						    } else {  
-						        log.error("Error al actualizar estados: {}", response.getMessage());  
-						    }  
-							log.error("Falla al escribir flag en el mainframe");
-							log.error("Código de respuesta FTP " + ftpClient.getReplyCode());
-							log.error("Mensaje de respuesta FTP " + ftpClient.getReplyString());
-						}
-					} else {
-						log.error("Falla al escribir data en el mainframe");
-						log.error("Código de respuesta FTP " + ftpClient.getReplyCode());
-						log.error("Mensaje de respuesta FTP " + ftpClient.getReplyString());
-					}
-				} catch (Exception e) {
-					log.error("No fue posible ejecutar el proceso asincrónico", e);
-				} finally {
-					try {
-						is.close();
-					} catch (IOException e) {
-						log.error("Error al cerrar el InputStream", e);
-					}
-				}
-			} else {
-				log.info("Fallo la conexión con el FTP");
-			}
-
-			try {
-				ftpClient.disconnect();
-				log.info("Código de respuesta desconexión FTP " + ftpClient.getReplyCode());
-				log.info("Mensaje de respuesta desconexión FTP " + ftpClient.getReplyString());
-			} catch (IOException ex) {
-				log.error("No fue posible la desconexión con el servidor FTP", ex);
-			}
-		} else {
-			log.info("no hay ejecucion en este ciclo horario");
-
-		}
-		return null;
+	        try {
+	            ftpClient.disconnect();
+	            addLog("Código de respuesta desconexión FTP %s", ftpClient.getReplyCode());
+	            addLog("Mensaje de respuesta desconexión FTP %s", ftpClient.getReplyString());
+	        } catch (IOException ex) {
+	            addLog("No fue posible la desconexión con el servidor FTP: %s", ex.getMessage());
+	        }
+	    } else {
+	        addLog("No hay ejecución en este ciclo horario");
+	    }
+	    return null;
 	}
+	
+	
 	
 	@Scheduled(cron = "0 * * * * *") //Se ejecuta cada minuto
 	public ResponseModel leerArchivoDesdeFTP() {  
@@ -2750,7 +2593,9 @@ public class GiomDao {
 	    InputStream inputStream = null;  
 	    ResponseModel responseModel = new ResponseModel();  
 
-	    String host = "180.183.174.156";  
+	     // DESARROLLO String host = "180.183.174.156";
+	 	// CALIDAD String host = "180.183.171.164";
+	    String host = "180.183.171.164";  
 	    ConsultarConfiguarcionDTO datos = new ConsultarConfiguarcionDTO();  
 
 	    // Obtener configuración del usuario  
@@ -2763,7 +2608,9 @@ public class GiomDao {
 	    parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();  
 	    String password = parametrosPivot.get(0).getValorConfigurado();  
 
-	    String path = "/home/ftpd0326/giom/recive/";  
+	     // PARA DESARROLLO ES : String path = "/home/ftpd0326/giom/recive/";
+	 	// PARA CALIDAD ES : String path = "/home/ftpq0326/giom/recive/";
+	    String path = "/home/ftpq0326/giom/recive/";  
 	    String newDirectoryPath = "giomrespaldo/"; // Ruta relativa para el nuevo archivo  
 
 	    boolean huboAcciones = false; // Indicador para saber si hubo procesamiento  
@@ -2775,7 +2622,7 @@ public class GiomDao {
 	            ftpClient.enterLocalPassiveMode();  
 
 	            if (!ftpClient.changeWorkingDirectory(path)) {  
-	                log.error("No se pudo cambiar al directorio: {}", path);  
+	                addLog("No se pudo cambiar al directorio: {}", path);  
 	                responseModel.setStatus(500);  
 	                responseModel.setMessage("No se pudo cambiar al directorio en el servidor FTP.");  
 	                return responseModel;  
@@ -2789,7 +2636,7 @@ public class GiomDao {
 	                                                 .collect(Collectors.toList());  
 
 	            if (archivosProceso.isEmpty()) {  
-	                log.info("No se encontraron archivos que comiencen con GIOM_RSP101.");  
+	                addLog("No se encontraron archivos que comiencen con GIOM_RSP101.");  
 	                responseModel.setStatus(404);  
 	                responseModel.setMessage("No se encontraron archivos que procesar.");  
 	                return responseModel;  
@@ -2812,13 +2659,13 @@ public class GiomDao {
 	                    boolean completed = ftpClient.completePendingCommand(); // Finalizar transferencia
 
 	                    if (!completed) {
-	                        log.error("No se completó la transferencia para: {}", fileName);
+	                        addLog("No se completó la transferencia para: {}", fileName);
 	                        continue;
 	                    }
 	                    
 	                    // Verificar si el archivo contiene "ENDOFFILE"
 	                    if (!contenido.toString().contains("ENDOFFILE")) {  
-	                        log.error("Archivo {} no contiene ENDOFFILE, no se procesará ni moverá.", fileName);  
+	                        addLog("Archivo {} no contiene ENDOFFILE, no se procesará ni moverá.", fileName);  
 	                        continue; // Saltar al siguiente archivo
 	                    }  
 
@@ -2829,15 +2676,15 @@ public class GiomDao {
 
 	                    for (LoteDTO lote : lotes) {  
 	                        String idLoteValue = lote.getIdLote();  
-	                        log.info("ID Lote: {}", idLoteValue);  
+	                        addLog("ID Lote: {}", idLoteValue);  
 
 	                        String estadoRegistro = "Da igual la letra";  
 
 	                        ResponseModel response = this.actualizarEstadoRegistro(idLoteValue, estadoRegistro);  
 	                        if (response.getStatus() == 200) {  
-	                            log.info("Estado del lote con ID {} actualizado correctamente.", idLoteValue);  
+	                            addLog("Estado del lote con ID {} actualizado correctamente.", idLoteValue);  
 	                        } else {  
-	                            log.error("Error al actualizar el estado del lote con ID {}: {}", idLoteValue, response.getMessage());  
+	                            addLog("Error al actualizar el estado del lote con ID {}: {}", idLoteValue, response.getMessage());  
 	                        }  
 
 	                        if (lote.getIdRegistro() == null || lote.getIdRegistro().isEmpty()) {  
@@ -2866,26 +2713,26 @@ public class GiomDao {
 	                    String newFilePath = newDirectoryPath + fileName;
 
 	                    if (ftpClient.rename(fileName, newFilePath)) {  
-	                        log.info("Archivo {} movido exitosamente a {}", fileName, newFilePath);  
+	                        addLog("Archivo {} movido exitosamente a {}", fileName, newFilePath);  
 	                    } else {  
 	                        int replyCode = ftpClient.getReplyCode();  
 	                        String replyString = ftpClient.getReplyString();  
-	                        log.error("Error al mover el archivo. Código: {}, Mensaje: {}", replyCode, replyString);  
+	                        addLog("Error al mover el archivo. Código: {}, Mensaje: {}", replyCode, replyString);  
 	                    }
 	                } else {  
-	                    log.error("El archivo no fue encontrado en el servidor.");  
+	                    addLog("El archivo no fue encontrado en el servidor.");  
 	                    responseModel.setStatus(404);  
 	                    responseModel.setMessage("El archivo no fue encontrado en el servidor.");  
 	                }  
 	            }  // Hasta aqui llega el continue
 	        } else {  
-	            log.error("No se pudo conectar al servidor FTP.");  
+	            addLog("No se pudo conectar al servidor FTP.");  
 	            responseModel.setStatus(500);  
 	            responseModel.setMessage("No se pudo conectar al servidor FTP.");  
 	        }   
 	        
 	    } catch (Exception e) {  
-	        log.error("Error al leer el archivo desde FTP", e);  
+	        addLog("Error al leer el archivo desde FTP: {}", e.getMessage());  
 	        responseModel.setStatus(500);  
 	        responseModel.setMessage("Error al leer el archivo desde FTP: " + e.getMessage());  
 	    } finally {  
@@ -2893,7 +2740,7 @@ public class GiomDao {
 	            try {  
 	                inputStream.close();  
 	            } catch (IOException e) {  
-	                log.error("Error al cerrar el InputStream", e);  
+	                addLog("Error al cerrar el InputStream: {}", e.getMessage());  
 	            }  
 	        }  
 	        if (ftpClient != null) {  
@@ -2901,48 +2748,523 @@ public class GiomDao {
 	                ftpClient.logout();  
 	                ftpClient.disconnect();  
 	            } catch (IOException e) {  
-	                log.error("Error al desconectar del servidor FTP", e);  
+	                addLog("Error al desconectar del servidor FTP: {}", e.getMessage());  
 	            }  
 	        }  
 	    }
 
+	    return responseModel;
+	}
+
+
+	/*
+	@Scheduled(cron = "0 0/30 * * * *")
+	public ResponseModel ejecutarFtp() {
+		// Reiniciar el contador antes de procesar los lotes
+		LoteDTO.resetContador(); // <--- Aquí se resetea
+		log.info("Iniciando el proceso asincrónico de mainframe automáticamente");
+		addLog("Iniciando el proceso asincrónico de mainframe automáticamente");
+
+		// 0. Siempre actualizar estados por fecha primero
+		addLog("Actualizando estados por fecha...");
+		log.info("Actualizando estados por fecha...");
+		ResponseModel estadoResponse = this.actualizarEstadosPorFecha();
+		if (estadoResponse.getStatus() != 200) {
+			log.error("Error al actualizar estados por fecha: {}", estadoResponse.getMessage());
+			addLog("Error al actualizar estados por fecha: {}", estadoResponse.getMessage());
+		} else {
+			//PARA ACTUALIZAR TODOS LOS LOTES EN ESTADO A Y W DE ACUERDO A SU FECHA DE VENCIMIENTO
+			log.info("Actualización de estados por fecha completada: {}", estadoResponse.getMessage());
+			addLog("Actualización de estados por fecha completada: %s", estadoResponse.getMessage());
+		}
+
+		// 1. Verificar si hay lotes activos (estado 'L')
+		boolean ejecutado = this.verificarDataMainframe();
+
+		// 2. Validar horario configurado
+		if (ejecutado) {
+			log.info("Iniciando validación de horario...");
+			addLog("Iniciando validación de horario...");
+			ejecutado = false; // Reiniciar antes de validar horas
+
+			ConsultarConfiguarcionDTO horaData = new ConsultarConfiguarcionDTO();
+			horaData.setDescriptor("H");
+			ResponseModel dataHoraSalida = this.consultarConfiguracion(horaData);
+
+			if (dataHoraSalida.getStatus() == 200) {
+				List<ParametrosDTO> horasData = (List<ParametrosDTO>) dataHoraSalida.getData();
+
+				if (horasData != null && !horasData.isEmpty()) {
+					// Usar la zona horaria correcta (ej: "America/Caracas")
+					LocalTime horaActual = LocalTime.now(ZoneId.of("America/Caracas"));
+					log.info("Hora actual: {}", horaActual.format(DateTimeFormatter.ofPattern("HH:mm")));
+					addLog("Hora actual: %s", horaActual.format(DateTimeFormatter.ofPattern("HH:mm")));
+
+					for (ParametrosDTO parametrosDTO : horasData) {
+						if (parametrosDTO.getEstado() == 1) { // Solo horas activas
+							LocalTime horaConfigurada = LocalTime.parse(parametrosDTO.getValorConfigurado());
+							log.debug("Validando hora: {}", horaConfigurada);
+							addLog("Validando hora: %s", horaConfigurada);
+
+							if (horaConfigurada.getHour() == horaActual.getHour()) {
+								log.warn("¡Ejecución permitida! Coincidencia con hora: {}",
+										horaConfigurada.format(DateTimeFormatter.ofPattern("HH:mm")));
+
+								addLog("¡Ejecución permitida! Coincidencia con hora: %s",
+										horaConfigurada.format(DateTimeFormatter.ofPattern("HH:mm")));
+
+								ejecutado = true;
+								break; // Salir al encontrar coincidencia
+							}
+						}
+					}
+				}
+			} else {
+				log.error("Error al consultar horas configuradas: {}", dataHoraSalida.getMessage());
+				addLog("Error al consultar horas configuradas: {}", dataHoraSalida.getMessage());
+			}
+			log.info("Resultado de validación de horas: {}", ejecutado);
+			addLog("Resultado de validación de horas: %s", ejecutado);
+		}
+
+
+
+		if (ejecutado) {
+
+			// Llamar al método obtenerLotesActivos para obtener los valores
+			ResponseModel lotesActivosResponse = obtenerLotesActivos();
+			String valores = (String) lotesActivosResponse.getData(); // Obtener el resultado como String
+
+			if (valores == null || valores.isEmpty()) {
+				log.error("No se obtuvieron IDs de lotes activos.");
+				addLog("No se obtuvieron IDs de lotes activos.");
+				return null;
+			}
+
+			String[] idLotesArray = valores.split(","); // Suponiendo que los IDs están separados por comas
+			StringBuilder resultadoFinal = new StringBuilder();
+
+			for (String idLote : idLotesArray) {
+				ResponseModel respuestaProcedimiento = obtenerRespuestaDelProcedimiento(idLote.trim());
+
+				if (respuestaProcedimiento.getStatus() == 200) {
+					// Obtener la lista de LoteDTO
+					List<LoteDTO> resultados = (List<LoteDTO>) respuestaProcedimiento.getData();
+					// Convertir la lista de LoteDTO a un String
+					for (LoteDTO lote : resultados) {
+						// Aquí debes definir cómo quieres convertir cada LoteDTO a String
+						resultadoFinal.append(lote.toFormattedString()).append("\n");
+					}
+				} else {
+					log.error("Error al obtener respuesta para el lote: {}", idLote);
+					addLog("Error al obtener respuesta para el lote: {}", idLote);
+				}
+			}
+
+			String resultado = resultadoFinal.toString(); // Convertir el StringBuilder a String
+
+			if (resultado.isEmpty()) {
+				log.error("No se obtuvieron datos del procedimiento, resultado es null o vacío.");
+				addLog("No se obtuvieron datos del procedimiento, resultado es null o vacío.");
+				return null;
+			}
+
+			//log.info("Resultado del procedimiento: {}", resultado);
+
+			log.info("Se inicia el proceso de consulta de base de datos para determinar la data de envío");
+			log.info("Iniciando proceso");
+
+			addLog("Se inicia el proceso de consulta de base de datos para determinar la data de envío");
+			addLog("Iniciando proceso");
+			FTPClient ftpClient = null;
+			ConsultarConfiguarcionDTO datos = new ConsultarConfiguarcionDTO();
+
+			// Obtener configuración del host FTP
+			datos.setDescriptor("FH");
+			List<ParametrosDTO> parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();
+			String host = parametrosPivot.get(0).getValorConfigurado();
+
+			// Obtener configuración de la contraseña
+			datos.setDescriptor("FP");
+			parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();
+			String password = parametrosPivot.get(0).getValorConfigurado();
+
+			// Obtener configuración del usuario
+			datos.setDescriptor("FU");
+			parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();
+			String usuario = parametrosPivot.get(0).getValorConfigurado();
+
+			log.info("Iniciando consulta de documentos XML en el servidor FTP");
+			log.info("Host FTP: \r\n " + host + " \r\n Contraseña de directorio remoto: " + password + " \r\n Usuario: " + usuario);
+			log.info("Iniciando conexión");
+
+			addLog("Iniciando consulta de documentos XML en el servidor FTP");
+			addLog("Host FTP: \r\n " + host + " \r\n Contraseña de directorio remoto: " + password + " \r\n Usuario: " + usuario);
+			addLog("Iniciando conexión");
+
+			ftpClient = FtpUtil.getFTPClient(host, 21, usuario, password);
+
+			if (ftpClient.isConnected()) {
+				log.info("Conexión establecida correctamente con el FTP");
+				addLog("Conexión establecida correctamente con el FTP");
+				byte[] textoDecomposed = resultado.getBytes(StandardCharsets.UTF_8);
+				InputStream is = new ByteArrayInputStream(textoDecomposed);
+
+				try {
+					//EN CALIDAD Y PRODUCCION LOS ARCHIVOS SON: VALP.GOFI.BAT1SBAS.GOJP0101.ENTRADA Y   VALP.GOFI.BAT1SBAS.GOJP0101.FLAG
+
+					//EN DESARROLLO LOS ARCHIVOS SON: VALT.GOFI.BAT1SBAS.GOJT0101.ENTRADA Y    VALT.GOFI.BAT1SBAS.GOJT0101.FLAG
+
+					boolean success = ftpClient.storeFile("'VALP.GOFI.BAT1SBAS.GOJP0101.ENTRADA'", is);
+					log.info("Código de respuesta FTP al tratar de registrar VALP.GOFI.BAT1SBAS.GOJP0101.ENTRADA "
+							+ ftpClient.getReplyCode() + " El valor de ftpClient es : " + ftpClient);
+					log.info("Mensaje de respuesta FTP al tratar de registrar VALP.GOFI.BAT1SBAS.GOJP0101.ENTRADA "
+							+ ftpClient.getReplyString());
+
+					addLog("Resultado escritura: %s - Código: %d - Mensaje: %s",
+							success,
+							ftpClient.getReplyCode(),
+							ftpClient.getReplyString());
+
+					if (success && ftpClient.getReplyCode() == 250) {
+						log.info("Escritura correcta en el mainframe");
+
+						log.info("Escritura correcta en el mainframe");
+						byte[] flagDecomposed = "PROCESO COMPLETADO".getBytes(StandardCharsets.UTF_8);
+						InputStream flagStream = new ByteArrayInputStream(flagDecomposed);
+						success = ftpClient.storeFile("'VALP.GOFI.BAT1SBAS.GOJP0101.FLAG'", flagStream);
+						log.info("Código de respuesta FTP al tratar de registrar VALP.GOFI.BAT1SBAS.GOJP0101.FLAG "
+								+ ftpClient.getReplyCode());
+						log.info("Mensaje de respuesta FTP al tratar de registrar VALP.GOFI.BAT1SBAS.GOJP0101.FLAG "
+								+ ftpClient.getReplyString());
+
+						addLog("Código de respuesta FTP al tratar de registrar VALP.GOFI.BAT1SBAS.GOJP0101.FLAG "
+								+ ftpClient.getReplyCode());
+						addLog("Mensaje de respuesta FTP al tratar de registrar VALP.GOFI.BAT1SBAS.GOJP0101.FLAG "
+								+ ftpClient.getReplyString());
+
+						if (success && ftpClient.getReplyCode() == 250) {
+							log.info("Proceso ejecutado correctamente, actualizando estados...");
+
+							addLog("Proceso ejecutado correctamente, actualizando estados...");
+
+							ArrayList<LoteMainframe> listaLotesEjecutar = this.consultarListaLotesMainframe();
+							List<String> idLotes = listaLotesEjecutar.stream()
+									.map(LoteMainframe::getIdlote)
+									.collect(Collectors.toList());
+
+							// Convertir lista a String separado por comas
+							String idLotesStr = String.join(",", idLotes);
+
+							// Llamar al nuevo método
+							ResponseModel response = this.actualizarEstadoLoteFTP(idLotesStr, "L");
+
+							if (response.getStatus() == 200) {
+								log.info("Estados actualizados exitosamente");
+								addLog("Estados actualizados exitosamente");
+							} else {
+								log.error("Error al actualizar estados: {}", response.getMessage());
+								addLog("Error al actualizar estados: {}", response.getMessage());
+							}
+							log.error("Falla al escribir flag en el mainframe");
+							log.error("Código de respuesta FTP " + ftpClient.getReplyCode());
+							log.error("Mensaje de respuesta FTP " + ftpClient.getReplyString());
+
+							addLog("Falla al escribir flag en el mainframe");
+							addLog("Código de respuesta FTP " + ftpClient.getReplyCode());
+							addLog("Mensaje de respuesta FTP " + ftpClient.getReplyString());
+						}
+					} else {
+						log.error("Falla al escribir data en el mainframe");
+						log.error("Código de respuesta FTP " + ftpClient.getReplyCode());
+						log.error("Mensaje de respuesta FTP " + ftpClient.getReplyString());
+
+						addLog("Falla al escribir data en el mainframe");
+						addLog("Código de respuesta FTP " + ftpClient.getReplyCode());
+						addLog("Mensaje de respuesta FTP " + ftpClient.getReplyString());
+					}
+				} catch (Exception e) {
+					log.error("No fue posible ejecutar el proceso asincrónico", e);
+
+					addLog("ERROR en operación FTP: %s", e.getMessage()); // Detalle específico
+
+					addLog("ERROR NO CONTROLADO: %s", e.getMessage());
+					log.error("Error crítico en ejecutarFtp", e);
+				} finally {
+					try {
+						is.close();
+					} catch (IOException e) {
+						log.error("Error al cerrar el InputStream", e);
+
+						addLog("ERROR en operación FTP: %s", e.getMessage()); // Detalle específico
+					}
+				}
+			} else {
+				log.info("Fallo la conexión con el FTP");
+
+				addLog("Fallo en conexión FTP. Código: %d - Mensaje: %s",
+						ftpClient.getReplyCode(),
+						ftpClient.getReplyString());
+			}
+
+			try {
+				ftpClient.disconnect();
+				log.info("Código de respuesta desconexión FTP " + ftpClient.getReplyCode());
+				log.info("Mensaje de respuesta desconexión FTP " + ftpClient.getReplyString());
+
+				addLog("Código de respuesta desconexión FTP " + ftpClient.getReplyCode());
+				addLog("Mensaje de respuesta desconexión FTP " + ftpClient.getReplyString());
+			} catch (IOException ex) {
+				log.error("No fue posible la desconexión con el servidor FTP", ex);
+
+				addLog("No fue posible la desconexión con el servidor FTP: %s", ex.getMessage());
+			}
+		} else {
+			log.info("no hay ejecucion en este ciclo horario");
+
+			addLog("no hay ejecucion en este ciclo horario");
+
+		}
+		return null;
+	}
+
+
+	@Scheduled(cron = "0 * * * * *") // Se ejecuta cada minuto
+	public ResponseModel leerArchivoDesdeFTP() {
+		FTPClient ftpClient = null;
+		ResponseModel responseModel = new ResponseModel();
+
+		// DESARROLLO String host = "180.183.174.156";
+		// CALIDAD String host = "180.183.171.164";
+		String host = "180.183.171.164";
+		ConsultarConfiguarcionDTO datos = new ConsultarConfiguarcionDTO();
+
+		// Obtener configuración del usuario
+		datos.setDescriptor("FU");
+		List<ParametrosDTO> parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();
+		String usuario = parametrosPivot.get(0).getValorConfigurado();
+
+		// Obtener configuración de la contraseña
+		datos.setDescriptor("FP");
+		parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();
+		String password = parametrosPivot.get(0).getValorConfigurado();
+
+		// PARA DESARROLLO ES : String path = "/home/ftpd0326/giom/recive/";
+		// PARA CALIDAD ES : String path = "/home/ftpq0326/giom/recive/";
+		String path = "/home/ftpq0326/giom/recive/";
+		String backupDir = "giomrespaldo/"; // Ruta relativa para respaldo
+
+		try {
+			addLog("Conectando a FTP | Host: %s | Usuario: %s", host, usuario);
+			ftpClient = FtpUtil.getFTPClient(host, 21, usuario, password);
+
+			if (ftpClient != null && ftpClient.isConnected()) {
+				addLog("Conexión FTP establecida correctamente");
+
+				// CONFIGURACIÓN ESENCIAL FTP
+				ftpClient.enterLocalPassiveMode();
+				ftpClient.setFileType(FTP.ASCII_FILE_TYPE);
+
+				// Cambiar al directorio principal
+				if (!ftpClient.changeWorkingDirectory(path)) {
+					addLog("ERROR: No se pudo cambiar al directorio: %s", path);
+					responseModel.setStatus(500);
+					responseModel.setMessage("No se pudo cambiar al directorio en el servidor FTP.");
+					return responseModel;
+				}
+				addLog("Directorio FTP cambiado a: %s", path);
+
+				// Verificar/Crear directorio de respaldo (ruta relativa)
+				if (!ftpClient.changeWorkingDirectory(backupDir)) {
+					addLog("Directorio de respaldo no existe, creando: %s", backupDir);
+					if (ftpClient.makeDirectory(backupDir)) {
+						addLog("Directorio de respaldo creado: %s", backupDir);
+					} else {
+						addLog("ERROR: No se pudo crear directorio de respaldo: %s", backupDir);
+					}
+				}
+				// Volver al directorio principal
+				ftpClient.changeWorkingDirectory(path);
+
+				// Listar archivos en el directorio
+				FTPFile[] files = ftpClient.listFiles();
+				List<String> archivosProceso = Arrays.stream(files)
+						.filter(f -> f.getName().startsWith("GIOM_RSP101"))
+						.map(FTPFile::getName)
+						.collect(Collectors.toList());
+
+				if (archivosProceso.isEmpty()) {
+					addLog("INFO: No se encontraron archivos GIOM_RSP101 para procesar");
+					responseModel.setStatus(404);
+					responseModel.setMessage("No se encontraron archivos que procesar.");
+					return responseModel;
+				}
+				addLog("Archivos a procesar: %d", archivosProceso.size());
+
+				for (String fileName : archivosProceso) {
+					InputStream inputStream = null;
+					try {
+						addLog("Procesando archivo: %s", fileName);
+						inputStream = ftpClient.retrieveFileStream(fileName);
+
+						if (inputStream != null) {
+							// Leer contenido del archivo
+							BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+							StringBuilder contenido = new StringBuilder();
+							String line;
+							while ((line = reader.readLine()) != null) {
+								contenido.append(line).append("\n");
+							}
+							reader.close();
+
+							// Completar transferencia FTP
+							boolean completed = ftpClient.completePendingCommand();
+							inputStream.close();
+
+							if (!completed) {
+								addLog("ADVERTENCIA: Transferencia incompleta para: %s", fileName);
+								continue;
+							}
+
+							addLog("Contenido leído: %d caracteres", contenido.length());
+
+							// Verificar archivo completo
+							if (!contenido.toString().contains("ENDOFFILE")) {
+								addLog("ADVERTENCIA: Archivo %s sin ENDOFFILE. Se reintentará", fileName);
+								continue;
+							}
+							addLog("Archivo %s completo - Parseando contenido", fileName);
+
+							List<LoteDTO> lotes = parsearTexto(contenido.toString());
+							int registrosActualizados = 0;
+							int registrosNoActualizados = 0;
+
+							for (LoteDTO lote : lotes) {
+								String idLoteValue = lote.getIdLote();
+								addLog("Procesando lote ID: %s", idLoteValue);
+
+								// Actualizar estado a "P" (Procesado)
+								ResponseModel response = this.actualizarEstadoRegistro(idLoteValue, "P");
+								if (response.getStatus() == 200) {
+									addLog("Estado actualizado - Lote ID: %s", idLoteValue);
+								} else {
+									addLog("ERROR actualizando estado - Lote %s: %s",
+											idLoteValue, response.getMessage());
+								}
+
+								if (lote.getIdRegistro() == null || lote.getIdRegistro().isEmpty()) {
+									registrosNoActualizados++;
+									addLog("ADVERTENCIA: Lote %s sin ID de registro", idLoteValue);
+									continue;
+								}
+
+								ResponseModel updateResponse = actualizarRespuestaMainframe(lote);
+								if (updateResponse.getStatus() == 200) {
+									registrosActualizados++;
+									addLog("Actualización mainframe exitosa - Lote ID: %s", idLoteValue);
+								} else {
+									registrosNoActualizados++;
+									addLog("ERROR actualizando mainframe - Lote %s: %s",
+											idLoteValue, updateResponse.getMessage());
+								}
+
+								Long idLoteLong = Long.parseLong(idLoteValue);
+								ResponseModel updateResponse2 = actualizarRespuestaMainframe2(idLoteLong);
+							}
+
+							responseModel.setData(lotes);
+							responseModel.setStatus(200);
+							responseModel.setMessage(
+									String.format("Actualizados: %d, No actualizados: %d",
+											registrosActualizados, registrosNoActualizados)
+							);
+							addLog("Resumen procesamiento: %s", responseModel.getMessage());
+
+							// Mover archivo procesado a respaldo (ruta relativa)
+							String newFilePath = backupDir + fileName;
+							if (ftpClient.rename(fileName, newFilePath)) {
+								addLog("Archivo movido a respaldo: %s", newFilePath);
+							} else {
+								addLog("ERROR moviendo archivo: Código %d - %s",
+										ftpClient.getReplyCode(), ftpClient.getReplyString());
+							}
+						} else {
+							addLog("ERROR: Archivo no encontrado: %s", fileName);
+						}
+					} catch (Exception e) {
+						addLog("ERROR procesando archivo %s: %s", fileName, e.getMessage());
+					} finally {
+						if (inputStream != null) {
+							try {
+								inputStream.close();
+							} catch (IOException e) {
+								addLog("ERROR cerrando stream: %s", e.getMessage());
+							}
+						}
+					}
+				}
+			} else {
+				addLog("ERROR: Conexión FTP fallida");
+				responseModel.setStatus(500);
+				responseModel.setMessage("No se pudo conectar al servidor FTP.");
+			}
+		} catch (Exception e) {
+			addLog("ERROR CRÍTICO: %s", e.getMessage());
+			responseModel.setStatus(500);
+			responseModel.setMessage("Error procesando archivos FTP: " + e.getMessage());
+		} finally {
+			if (ftpClient != null) {
+				try {
+					if (ftpClient.isConnected()) {
+						ftpClient.logout();
+						ftpClient.disconnect();
+						addLog("Desconexión FTP exitosa");
+					}
+				} catch (IOException e) {
+					addLog("ERROR desconectando FTP: %s", e.getMessage());
+				}
+			}
+		}
+
+		addLog("Proceso FTP finalizado - Estado: %d", responseModel.getStatus());
 		return responseModel;
 	}
+*/
 	
 	
-	public ResponseModel listarArchivosEnDirectorio() {  
-	    ResponseModel responseModel = new ResponseModel();  
-	    respuestasFromDTO resp = new respuestasFromDTO();  
-	    List<String> archivosLocal = new ArrayList<>(); // Almacenar nombres de archivos  
+	public ResponseModel listarArchivosEnDirectorio() {
+		ResponseModel responseModel = new ResponseModel();
+		respuestasFromDTO resp = new respuestasFromDTO();
+		List<String> archivosLocal = new ArrayList<>(); // Almacenar nombres de archivos
 
-	    try (Stream<Path> walk = Files.walk(Paths.get("/home/oraclew/Oracle/Middleware/Oracle_Home/user_projects/domains/java_domain/servers/AdminServer/upload/"))) {
-	        // Filtrar todos los archivos en el directorio especificado  
-	        archivosLocal = walk.filter(Files::isRegularFile)  
-	                .map(x -> x.getFileName().toString())  
-	                .collect(Collectors.toList());  
+		try (Stream<Path> walk = Files.walk(Paths.get("/home/oraclew/Oracle/Middleware/Oracle_Home/user_projects/domains/java_domain/servers/AdminServer/upload/"))) {
+			// Filtrar todos los archivos en el directorio especificado
+			archivosLocal = walk.filter(Files::isRegularFile)
+					.map(x -> x.getFileName().toString())
+					.collect(Collectors.toList());
 
-	        // Registrar la lista de archivos encontrados  
-	        log.info("Archivos encontrados: {}", archivosLocal);  
+			// Registrar la lista de archivos encontrados
+			log.info("Archivos encontrados: {}", archivosLocal);
 
-	        resp.setEstatus("SUCCESS");  
-	        resp.setMensaje("Consulta realizada exitosamente");  
-	        resp.setData(archivosLocal); // Almacenar los nombres de todos los archivos encontrados  
-	    } catch (IOException e) {  
-	        resp.setEstatus("ERROR");  
-	        resp.setMensaje("Error al buscar archivos: " + e.getMessage());  
-	        log.error("Error al buscar archivos", e);  
-	    }  
+			resp.setEstatus("SUCCESS");
+			resp.setMensaje("Consulta realizada exitosamente");
+			resp.setData(archivosLocal); // Almacenar los nombres de todos los archivos encontrados
+		} catch (IOException e) {
+			resp.setEstatus("ERROR");
+			resp.setMensaje("Error al buscar archivos: " + e.getMessage());
+			log.error("Error al buscar archivos", e);
+		}
 
-	    // Aquí puedes decidir cómo devolver la respuesta final  
-	    responseModel.setStatus(200); // Código de éxito  
-	    responseModel.setMessage(resp.getMensaje());  
-	    responseModel.setData(archivosLocal); // Almacenar la lista de archivos encontrados  
+		// Aquí puedes decidir cómo devolver la respuesta final
+		responseModel.setStatus(200); // Código de éxito
+		responseModel.setMessage(resp.getMensaje());
+		responseModel.setData(archivosLocal); // Almacenar la lista de archivos encontrados
 
-	    return responseModel; // Devolver el ResponseModel  
+		return responseModel; // Devolver el ResponseModel
 	}
-	
-	
-	
+
+
+
 	public ResponseModel modificardatosestadoReprocesado(EstadosLoteDTO datos) {
 		ResponseModel response = new ResponseModel();
 		try {
@@ -3018,593 +3340,593 @@ public class GiomDao {
 			return response;
 		}
 	}
-	
-	
-	public List<LoteDTO> parsearTexto(String contenido) {  
-	    List<LoteDTO> lotes = new ArrayList<>();  
 
-	    // Dividir el contenido en líneas (si hay varias líneas)  
-	    String[] lineas = contenido.split("\n");  
 
-	    for (String linea : lineas) {  
-	        if (linea.length() >= 220) {  
-	            LoteDTO lote = new LoteDTO();  
+	public List<LoteDTO> parsearTexto(String contenido) {
+		List<LoteDTO> lotes = new ArrayList<>();
 
-	            try {  
-	                // Asignar valores a las propiedades del DTO según las posiciones  
-	                lote.setIncremental(linea.substring(0, 10).trim());  
-	                lote.setIdLote(linea.substring(11, 25).trim());  
-	                lote.setIdRegistro(linea.substring(26, 40).trim());  
-	                lote.setReferencia(linea.substring(41, 48).trim());  
-	                lote.setTipoMovimiento(linea.substring(49, 50).trim());  
-	                lote.setFecha(linea.substring(50, 57).trim());  
-	                lote.setCedula(linea.substring(58, 58).trim());  
-	                lote.setNumeroOrdenante(linea.substring(59, 69).trim());  
-	                lote.setDigitoOrdenante(linea.substring(70, 70).trim());  
-	                lote.setNumeroDeCuenta(linea.substring(71, 90).trim());  
-	                lote.setSerialOperacion(linea.substring(91, 95).trim());  
-	                lote.setCodigoOperacion(linea.substring(96, 99).trim());  
+		// Dividir el contenido en líneas (si hay varias líneas)
+		String[] lineas = contenido.split("\n");
 
-	                // Validar y convertir montoTransaccion  
-	                String montoStr = linea.substring(100, 116).trim();  
-	                if (!montoStr.isEmpty()) {  
-	                    lote.setMontoTransaccion(Double.valueOf(montoStr));  
-	                } else {  
-	                    lote.setMontoTransaccion(0.0);  
-	                }  
+		for (String linea : lineas) {
+			if (linea.length() >= 220) {
+				LoteDTO lote = new LoteDTO();
 
-	                // Asignaciones adicionales  
-	                lote.setCampoLibre(linea.substring(116, 116).trim());  
-	                lote.setValidaCedula(linea.substring(117, 118).trim());  
-	                lote.setTipoLote(linea.substring(118, 120).trim());  
-	                
-	                //Respuesta de Mainframe
-	                lote.setObservacion(linea.substring(121, 170).trim()); 
-	                lote.setCod_err(linea.substring(170, 172).trim()); 
-	                lote.setTip_err(linea.substring(172, 179).trim()); 
-	                lote.setDes_err(linea.substring(182, 219).trim());
+				try {
+					// Asignar valores a las propiedades del DTO según las posiciones
+					lote.setIncremental(linea.substring(0, 10).trim());
+					lote.setIdLote(linea.substring(11, 25).trim());
+					lote.setIdRegistro(linea.substring(26, 40).trim());
+					lote.setReferencia(linea.substring(41, 48).trim());
+					lote.setTipoMovimiento(linea.substring(49, 50).trim());
+					lote.setFecha(linea.substring(50, 57).trim());
+					lote.setCedula(linea.substring(58, 58).trim());
+					lote.setNumeroOrdenante(linea.substring(59, 69).trim());
+					lote.setDigitoOrdenante(linea.substring(70, 70).trim());
+					lote.setNumeroDeCuenta(linea.substring(71, 90).trim());
+					lote.setSerialOperacion(linea.substring(91, 95).trim());
+					lote.setCodigoOperacion(linea.substring(96, 99).trim());
 
-	                // Agregar el lote a la lista  
-	                lotes.add(lote);  
-	            } catch (NumberFormatException e) {  
-	                log.error("Error al convertir montoTransaccion: {}", e.getMessage());  
-	            } catch (Exception e) {  
-	                log.error("Error al procesar la línea: {}. Error: {}", linea, e.getMessage());  
-	            }  
-	        } else {  
-	            log.warn("La línea no tiene la longitud esperada: {}", linea);  
-	        }  
-	    }  
+					// Validar y convertir montoTransaccion
+					String montoStr = linea.substring(100, 116).trim();
+					if (!montoStr.isEmpty()) {
+						lote.setMontoTransaccion(Double.valueOf(montoStr));
+					} else {
+						lote.setMontoTransaccion(0.0);
+					}
 
-	    return lotes;  
-	}
-	
-	
-	public ResponseModel actualizarRespuestaMainframe(LoteDTO datos) {  
-	    ResponseModel response = new ResponseModel();  
-	    try {  
-	        // Validar que el ID de registro no sea nulo o vacío  
-	        if (datos.getIdRegistro() == null || datos.getIdRegistro().isEmpty()) {  
-	            response.setCode(9999);  
-	            response.setMessage("El ID de registro es nulo o vacío.");  
-	            response.setStatus(400); // Bad Request  
-	            return response;  
-	        }  
+					// Asignaciones adicionales
+					lote.setCampoLibre(linea.substring(116, 116).trim());
+					lote.setValidaCedula(linea.substring(117, 118).trim());
+					lote.setTipoLote(linea.substring(118, 120).trim());
 
-	        // Similar validación para otros campos necesarios si fuera necesario  
-	        if (datos.getCod_err() == null || datos.getCod_err().isEmpty()) {  
-	            response.setCode(9999);  
-	            response.setMessage("El código de error es nulo o vacío.");  
-	            response.setStatus(400); // Bad Request  
-	            return response;  
-	        }  
+					//Respuesta de Mainframe
+					lote.setObservacion(linea.substring(121, 170).trim());
+					lote.setCod_err(linea.substring(170, 172).trim());
+					lote.setTip_err(linea.substring(172, 179).trim());
+					lote.setDes_err(linea.substring(182, 219).trim());
 
-	        SimpleJdbcCall jdbcCall = new SimpleJdbcCall(jdbcTemplate)  
-	                .withProcedureName("GIOM.PRC_ACTUALIZAR_RESPUESTA_MAINFRAME")  
-	                .withoutProcedureColumnMetaDataAccess()  
-	                .declareParameters(  
-	                        new SqlOutParameter("COD_RET", OracleTypes.VARCHAR),  
-	                        new SqlOutParameter("DE_RET", OracleTypes.VARCHAR),  
-	                        new SqlParameter("P_ID_REGISTRO_GIOM_PK", OracleTypes.NUMBER),  
-	                        new SqlParameter("P_COD_RESPUESTA", OracleTypes.VARCHAR),  
-	                        new SqlParameter("P_DESC_RESPUESTA", OracleTypes.VARCHAR),  
-	                        new SqlParameter("P_SERIAL_RESPUESTA", OracleTypes.VARCHAR)  
-	                );  
+					// Agregar el lote a la lista
+					lotes.add(lote);
+				} catch (NumberFormatException e) {
+					log.error("Error al convertir montoTransaccion: {}", e.getMessage());
+				} catch (Exception e) {
+					log.error("Error al procesar la línea: {}. Error: {}", linea, e.getMessage());
+				}
+			} else {
+				log.warn("La línea no tiene la longitud esperada: {}", linea);
+			}
+		}
 
-	        MapSqlParameterSource inputMap = new MapSqlParameterSource();  
-	        inputMap.addValue("P_ID_REGISTRO_GIOM_PK", datos.getIdRegistro());  
-	        inputMap.addValue("P_COD_RESPUESTA", datos.getCod_err());  
-	        inputMap.addValue("P_DESC_RESPUESTA", datos.getDes_err());  
-	        inputMap.addValue("P_SERIAL_RESPUESTA", datos.getTip_err());  
-
-	        Map<String, Object> resultMap = jdbcCall.execute(inputMap);  
-	        String codRetorno = (String) resultMap.get("COD_RET");  
-	        String descRetorno = (String) resultMap.get("DE_RET");  
-
-	        if (codRetorno.equals("1000")) {  
-	            response.setCode(1000);  
-	            response.setStatus(200);  
-	            response.setMessage(descRetorno);  
-	        } else {  
-	            response.setCode(9999);  
-	            response.setMessage(descRetorno);  
-	            response.setStatus(204);  
-	        }  
-	    } catch (Exception e) {  
-	        response.setCode(9999);  
-	        response.setMessage("Error al llamar al procedimiento PRC_ACTUALIZAR_RESPUESTA_MAINFRAME: " + e.getMessage());  
-	        response.setStatus(500);  
-	        log.error(e.getMessage(), e);  
-	    }  
-	    return response;  
-	}
-	
-	
-	
-	public ResponseModel comprimirArchivoLocal() {  
-	    FTPClient ftpClient = null;  
-	    InputStream inputStream = null;  
-	    ResponseModel responseModel = new ResponseModel();  
-
-	    String host = "180.183.174.156";  
-	    ConsultarConfiguarcionDTO datos = new ConsultarConfiguarcionDTO();  
-	    
-	    // Obtener configuración del usuario  
-	    datos.setDescriptor("FU");  
-	    List<ParametrosDTO> parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();  
-	    String usuario = parametrosPivot.get(0).getValorConfigurado();  
-
-	    // Obtener configuración de la contraseña  
-	    datos.setDescriptor("FP");  
-	    parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();  
-	    String password = parametrosPivot.get(0).getValorConfigurado();  
-
-	    String path = "/home/ftpd0326/giom/recive/";  
-	    String fileName = "prueba.txt"; // Archivo específico a procesar  
-	    String newDirectory = "archivo_zip"; // Nombre del nuevo directorio  
-	    String zipFileName = fileName.replace(".txt", ".zip"); // Nombre del archivo ZIP  
-
-	    // Declarar ByteArrayOutputStream fuera del bloque try-with-resources
-	    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-
-	    try {  
-	        ftpClient = FtpUtil.getFTPClient(host, 21, usuario, password);  
-
-	        if (ftpClient != null && ftpClient.isConnected()) {  
-	            ftpClient.enterLocalPassiveMode();  
-
-	            // Intentar recuperar el archivo específico  
-	            ftpClient.changeWorkingDirectory(path);  
-	            inputStream = ftpClient.retrieveFileStream(fileName);  
-
-	            if (inputStream != null) {  
-	                // Crear el nuevo directorio en el servidor FTP si no existe  
-	                if (!ftpClient.changeWorkingDirectory(newDirectory)) {  
-	                    ftpClient.makeDirectory(newDirectory);  
-	                    ftpClient.changeWorkingDirectory(newDirectory);  
-	                }  
-
-	                // Crear un InputStream para el ZIP que se mandará al FTP  
-	                try (ZipOutputStream zipOutputStream = new ZipOutputStream(byteArrayOutputStream)) {  
-
-	                    // Crear entrada para el archivo en el ZIP  
-	                    ZipEntry zipEntry = new ZipEntry(fileName);  
-	                    zipOutputStream.putNextEntry(zipEntry);  
-
-	                    // Leer el archivo original y escribir en el ZIP  
-	                    byte[] bytes = new byte[1024];  
-	                    int length;  
-	                    while ((length = inputStream.read(bytes)) >= 0) {  
-	                        zipOutputStream.write(bytes, 0, length);  
-	                    }  
-	                    zipOutputStream.closeEntry();  
-	                }  
-
-	                // Subir el archivo ZIP al servidor FTP  
-	                ftpClient.changeWorkingDirectory(newDirectory); // Asegúrate de estar en el nuevo directorio  
-	                ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(byteArrayOutputStream.toByteArray());  
-	                boolean success = ftpClient.storeFile(zipFileName, byteArrayInputStream);  
-	                
-	                // Cerrar streams  
-	                byteArrayInputStream.close();  
-
-	                if (success) {  
-	                    log.info("Archivo comprimido creado y subido exitosamente: {}", zipFileName);  
-	                    responseModel.setStatus(200);  
-	                    responseModel.setMessage("El archivo prueba.txt ha sido comprimido y subido correctamente.");  
-	                } else {  
-	                    log.error("Error al subir el archivo ZIP al servidor FTP.");  
-	                    responseModel.setStatus(500);  
-	                    responseModel.setMessage("Error al subir el archivo ZIP al servidor FTP.");  
-	                }  
-
-	                ftpClient.completePendingCommand(); // Completar la transferencia  
-	            } else {  
-	                log.error("El archivo prueba.txt no fue encontrado en el servidor.");  
-	                responseModel.setStatus(404);  
-	                responseModel.setMessage("El archivo prueba.txt no fue encontrado en el servidor.");  
-	            }  
-	        } else {  
-	            log.error("No se pudo conectar al servidor FTP.");  
-	            responseModel.setStatus(500);  
-	            responseModel.setMessage("No se pudo conectar al servidor FTP.");  
-	        }  
-	    } catch (Exception e) {  
-	        log.error("Error al leer y comprimir archivos desde FTP: ", e);  
-	        responseModel.setStatus(500);  
-	        responseModel.setMessage("Error al leer y comprimir archivos desde FTP: " + e.getMessage());  
-	    } finally {  
-	        if (ftpClient != null) {  
-	            try {  
-	                ftpClient.logout();  
-	                ftpClient.disconnect();  
-	            } catch (IOException e) {  
-	                log.error("Error al desconectar del servidor FTP", e);  
-	            }  
-	        }  
-	        if (inputStream != null) {  
-	            try {  
-	                inputStream.close(); // Asegurarse de cerrar el InputStream  
-	            } catch (IOException e) {  
-	                log.error("Error al cerrar InputStream", e);  
-	            }  
-	        }  
-	        try {
-	            byteArrayOutputStream.close(); // Cerrar ByteArrayOutputStream
-	        } catch (IOException e) {
-	            log.error("Error al cerrar ByteArrayOutputStream", e);
-	        }
-	    }  
-
-	    return responseModel;  
+		return lotes;
 	}
 
-	private void compressToZip(InputStream inputStream, String zipFilePath) {  
-	    try (FileOutputStream fos = new FileOutputStream(zipFilePath);  
-	         ZipOutputStream zipOut = new ZipOutputStream(fos)) {  
-	        ZipEntry zipEntry = new ZipEntry("archivo.txt"); // Nombrar el archivo dentro del zip  
-	        zipOut.putNextEntry(zipEntry);  
 
-	        byte[] bytes = new byte[1024];  
-	        int length;  
-	        while ((length = inputStream.read(bytes)) >= 0) {  
-	            zipOut.write(bytes, 0, length);  
-	        }  
-
-	        zipOut.closeEntry();  
-	    } catch (IOException e) {  
-	        log.error("Error al comprimir el archivo a .zip", e);  
-	    }  
-	}  
-	
-	
-	public ResponseModel moverArchivoEnFTP() {  
-	    FTPClient ftpClient = null;  
-	    ResponseModel responseModel = new ResponseModel();  
-
-	    String host = "180.183.174.156"; // Dirección del servidor FTP    
-	    ConsultarConfiguarcionDTO datos = new ConsultarConfiguarcionDTO();  
-	    datos.setDescriptor("FU");  
-
-	    // Obtener configuración del usuario  
-	    List<ParametrosDTO> parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();  
-	    String usuario = parametrosPivot.get(0).getValorConfigurado();  
-
-	    // Obtener configuración de la contraseña  
-	    datos.setDescriptor("FP");  
-	    parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();  
-	    String password = parametrosPivot.get(0).getValorConfigurado();  
-
-	    String path = "/home/ftpd0326/giom/recive/";  
-	    String fileName = "GIOM_RSP101.VE241127115229";  
-	    String newFilePath = "giomrespaldo/" + fileName; // Solo dejar la ruta relativa para el nuevo archivo  
-
-	    try {  
-	        ftpClient = FtpUtil.getFTPClient(host, 21, usuario, password);  
-	        
-	        if (ftpClient.isConnected()) {  
-	            ftpClient.enterLocalPassiveMode();  
-
-	            // Cambiar al directorio de origen  
-	            if (!ftpClient.changeWorkingDirectory(path)) {  
-	                log.error("No se pudo cambiar al directorio: {}", path);  
-	                responseModel.setStatus(500);  
-	                responseModel.setMessage("No se pudo cambiar al directorio en el servidor FTP.");  
-	                return responseModel;  
-	            } else {  
-	                log.info("Cambiado al directorio: {}", path);  
-	            }  
-
-	            // Verificar si el archivo existe  
-	            FTPFile[] files = ftpClient.listFiles();  
-	            boolean fileExists = Arrays.stream(files).anyMatch(f -> f.getName().equals(fileName));  
-	            if (!fileExists) {  
-	                responseModel.setStatus(500);  
-	                responseModel.setMessage("El archivo no existe en el directorio de origen.");  
-	                return responseModel;  
-	            }  
-
-	            // Intentar mover el archivo al directorio de respaldo  
-	            if (ftpClient.rename(fileName, newFilePath)) {  
-	                responseModel.setStatus(200);  
-	                responseModel.setMessage("Archivo movido exitosamente a: " + newFilePath);  
-	            } else {  
-	                int replyCode = ftpClient.getReplyCode(); // Obtener el código de respuesta  
-	                String replyString = ftpClient.getReplyString(); // Obtener mensaje de respuesta  
-	                log.error("No se pudo mover el archivo. Código de respuesta: {}, Mensaje: {}", replyCode, replyString);  
-	                responseModel.setStatus(500);  
-	                responseModel.setMessage("Error al mover el archivo: " + replyString);  
-	            }  
-	        } else {  
-	            log.error("No se pudo conectar al servidor FTP.");  
-	            responseModel.setStatus(500);  
-	            responseModel.setMessage("No se pudo conectar al servidor FTP.");  
-	        }  
-	    } catch (Exception e) {  
-	        log.error("Error al mover el archivo en FTP", e);  
-	        responseModel.setStatus(500);  
-	        responseModel.setMessage("Error al mover el archivo en FTP: " + e.getMessage());  
-	    } finally {  
-	        if (ftpClient != null) {  
-	            try {  
-	                ftpClient.logout();  
-	                ftpClient.disconnect();  
-	            } catch (IOException e) {  
-	                log.error("Error al desconectar del servidor FTP", e);  
-	            }  
-	        }  
-	    }  
-	    return responseModel;  
-	}
-	
-	
-	
-	public ResponseModel leerArchivoDesdeFTP2() {  
-	    FTPClient ftpClient = null; // Inicializar el FTPClient  
-	    InputStream inputStream = null;  
-	    ResponseModel responseModel = new ResponseModel();  
-
-	    // Establecer el host FTP directamente  
-	    String host = "180.183.174.156"; // Dirección del servidor FTP  
-	    // Crear un objeto para consultar la configuración  
-	    ConsultarConfiguarcionDTO datos = new ConsultarConfiguarcionDTO();  
-
-	    // Obtener configuración del usuario  
-	    datos.setDescriptor("FU");  
-	    List<ParametrosDTO> parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();  
-	    String usuario = parametrosPivot.get(0).getValorConfigurado();  
-
-	    // Obtener configuración de la contraseña  
-	    datos.setDescriptor("FP");  
-	    parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();  
-	    String password = parametrosPivot.get(0).getValorConfigurado();  
-
-	    // Configurar el path y el nombre del archivo  
-	    String path = "/home/ftpd0326/giom/recive/"; // Asegúrate de que el path sea correcto  
-	    String fileName = "GIOM_RSP101.VE241219115605"; // Nombre del archivo a leer  
-
-	    try {  
-	        ftpClient = FtpUtil.getFTPClient(host, 21, usuario, password); // Usar FtpUtil para obtener el cliente FTP  
-
-	        if (ftpClient.isConnected()) {  
-	            ftpClient.enterLocalPassiveMode(); // Cambia a modo pasivo  
-
-	            // Cambiar al directorio donde se encuentra el archivo  
-	            if (!ftpClient.changeWorkingDirectory(path)) {  
-	                log.error("No se pudo cambiar al directorio: {}", path);  
-	                responseModel.setStatus(500);  
-	                responseModel.setMessage("No se pudo cambiar al directorio en el servidor FTP.");  
-	                return responseModel;  
-	            }  
-
-	            inputStream = ftpClient.retrieveFileStream(fileName);  
-
-	            if (inputStream != null) {  
-	                BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));  
-	                StringBuilder contenido = new StringBuilder();  
-	                String line;  
-	                while ((line = reader.readLine()) != null) {  
-	                    contenido.append(line).append("\n");  
-	                }  
-	                reader.close();  
-	                
-	                // Llamar al método para parsear el contenido  
-	                List<LoteDTO> lotes = parsearTexto(contenido.toString());  
-	                
-	                responseModel.setData(lotes); // Establecer la lista de lotes en el ResponseModel  
-	               // responseModel.setData(contenido.toString()); // Establecer el contenido en el ResponseModel  
-	                responseModel.setStatus(200); // Código de éxito 
-	            } else {  
-	                log.error("El archivo no fue encontrado en el servidor.");  
-	                responseModel.setStatus(404); // Archivo no encontrado  
-	                responseModel.setMessage("El archivo no fue encontrado en el servidor.");  
-	            }  
-	        } else {  
-	            log.error("No se pudo conectar al servidor FTP.");  
-	            responseModel.setStatus(500); // Error de conexión  
-	            responseModel.setMessage("No se pudo conectar al servidor FTP.");  
-	        }  
-	    } catch (Exception e) {  
-	        log.error("Error al leer el archivo desde FTP", e);  
-	        responseModel.setStatus(500); // Error interno del servidor  
-	        responseModel.setMessage("Error al leer el archivo desde FTP: " + e.getMessage());  
-	    } finally {  
-	        if (inputStream != null) {  
-	            try {  
-	                inputStream.close();  
-	            } catch (IOException e) {  
-	                log.error("Error al cerrar el InputStream", e);  
-	            }  
-	        }  
-	        if (ftpClient != null) {  
-	            try {  
-	                ftpClient.logout();  
-	                ftpClient.disconnect();  
-	            } catch (IOException e) {  
-	                log.error("Error al desconectar del servidor FTP", e);  
-	            }  
-	        }  
-	    }  
-	    return responseModel;  
-	}
-	    
-	    
-	    
-	public ResponseModel ejecutarFtpAutomatico2() {
-		log.info("Iniciando el proceso asincrónico de mainframe automáticamente");
-
-			//********** LOGICA PARA OBTENER EL ID DE LOS LOTES, EXTRAER TODA LA DATA DE SUS ARCHIVOS.TXT Y ENVIARLA A TRAVES DE UN ARRAY **********
-
-
-			// Llamar al método obtenerLotesActivos para obtener los valores
-			ResponseModel lotesActivosResponse = obtenerLotesActivos();
-			String valores = (String) lotesActivosResponse.getData(); // Obtener el resultado como String
-
-			if (valores == null || valores.isEmpty()) {
-				log.error("No se obtuvieron IDs de lotes activos.");
-				return null;
+	public ResponseModel actualizarRespuestaMainframe(LoteDTO datos) {
+		ResponseModel response = new ResponseModel();
+		try {
+			// Validar que el ID de registro no sea nulo o vacío
+			if (datos.getIdRegistro() == null || datos.getIdRegistro().isEmpty()) {
+				response.setCode(9999);
+				response.setMessage("El ID de registro es nulo o vacío.");
+				response.setStatus(400); // Bad Request
+				return response;
 			}
 
-			String[] idLotesArray = valores.split(","); // Suponiendo que los IDs están separados por comas
-			StringBuilder resultadoFinal = new StringBuilder();
+			// Similar validación para otros campos necesarios si fuera necesario
+			if (datos.getCod_err() == null || datos.getCod_err().isEmpty()) {
+				response.setCode(9999);
+				response.setMessage("El código de error es nulo o vacío.");
+				response.setStatus(400); // Bad Request
+				return response;
+			}
 
-			for (String idLote : idLotesArray) {
-				ResponseModel respuestaProcedimiento = obtenerRespuestaDelProcedimiento(idLote.trim());
+			SimpleJdbcCall jdbcCall = new SimpleJdbcCall(jdbcTemplate)
+					.withProcedureName("GIOM.PRC_ACTUALIZAR_RESPUESTA_MAINFRAME")
+					.withoutProcedureColumnMetaDataAccess()
+					.declareParameters(
+							new SqlOutParameter("COD_RET", OracleTypes.VARCHAR),
+							new SqlOutParameter("DE_RET", OracleTypes.VARCHAR),
+							new SqlParameter("P_ID_REGISTRO_GIOM_PK", OracleTypes.NUMBER),
+							new SqlParameter("P_COD_RESPUESTA", OracleTypes.VARCHAR),
+							new SqlParameter("P_DESC_RESPUESTA", OracleTypes.VARCHAR),
+							new SqlParameter("P_SERIAL_RESPUESTA", OracleTypes.VARCHAR)
+					);
 
-				if (respuestaProcedimiento.getStatus() == 200) {
-					// Obtener la lista de LoteDTO
-					List<LoteDTO> resultados = (List<LoteDTO>) respuestaProcedimiento.getData();
-					// Convertir la lista de LoteDTO a un String
-					for (LoteDTO lote : resultados) {
-						// Aquí debes definir cómo quieres convertir cada LoteDTO a String
-						resultadoFinal.append(lote.toFormattedString()).append("\n"); // Asegúrate de que LoteDTO tenga un método toString adecuado
+			MapSqlParameterSource inputMap = new MapSqlParameterSource();
+			inputMap.addValue("P_ID_REGISTRO_GIOM_PK", datos.getIdRegistro());
+			inputMap.addValue("P_COD_RESPUESTA", datos.getCod_err());
+			inputMap.addValue("P_DESC_RESPUESTA", datos.getDes_err());
+			inputMap.addValue("P_SERIAL_RESPUESTA", datos.getTip_err());
+
+			Map<String, Object> resultMap = jdbcCall.execute(inputMap);
+			String codRetorno = (String) resultMap.get("COD_RET");
+			String descRetorno = (String) resultMap.get("DE_RET");
+
+			if (codRetorno.equals("1000")) {
+				response.setCode(1000);
+				response.setStatus(200);
+				response.setMessage(descRetorno);
+			} else {
+				response.setCode(9999);
+				response.setMessage(descRetorno);
+				response.setStatus(204);
+			}
+		} catch (Exception e) {
+			response.setCode(9999);
+			response.setMessage("Error al llamar al procedimiento PRC_ACTUALIZAR_RESPUESTA_MAINFRAME: " + e.getMessage());
+			response.setStatus(500);
+			log.error(e.getMessage(), e);
+		}
+		return response;
+	}
+
+
+
+	public ResponseModel comprimirArchivoLocal() {
+		FTPClient ftpClient = null;
+		InputStream inputStream = null;
+		ResponseModel responseModel = new ResponseModel();
+
+		String host = "180.183.174.156";
+		ConsultarConfiguarcionDTO datos = new ConsultarConfiguarcionDTO();
+
+		// Obtener configuración del usuario
+		datos.setDescriptor("FU");
+		List<ParametrosDTO> parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();
+		String usuario = parametrosPivot.get(0).getValorConfigurado();
+
+		// Obtener configuración de la contraseña
+		datos.setDescriptor("FP");
+		parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();
+		String password = parametrosPivot.get(0).getValorConfigurado();
+
+		String path = "/home/ftpd0326/giom/recive/";
+		String fileName = "prueba.txt"; // Archivo específico a procesar
+		String newDirectory = "archivo_zip"; // Nombre del nuevo directorio
+		String zipFileName = fileName.replace(".txt", ".zip"); // Nombre del archivo ZIP
+
+		// Declarar ByteArrayOutputStream fuera del bloque try-with-resources
+		ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+
+		try {
+			ftpClient = FtpUtil.getFTPClient(host, 21, usuario, password);
+
+			if (ftpClient != null && ftpClient.isConnected()) {
+				ftpClient.enterLocalPassiveMode();
+
+				// Intentar recuperar el archivo específico
+				ftpClient.changeWorkingDirectory(path);
+				inputStream = ftpClient.retrieveFileStream(fileName);
+
+				if (inputStream != null) {
+					// Crear el nuevo directorio en el servidor FTP si no existe
+					if (!ftpClient.changeWorkingDirectory(newDirectory)) {
+						ftpClient.makeDirectory(newDirectory);
+						ftpClient.changeWorkingDirectory(newDirectory);
 					}
+
+					// Crear un InputStream para el ZIP que se mandará al FTP
+					try (ZipOutputStream zipOutputStream = new ZipOutputStream(byteArrayOutputStream)) {
+
+						// Crear entrada para el archivo en el ZIP
+						ZipEntry zipEntry = new ZipEntry(fileName);
+						zipOutputStream.putNextEntry(zipEntry);
+
+						// Leer el archivo original y escribir en el ZIP
+						byte[] bytes = new byte[1024];
+						int length;
+						while ((length = inputStream.read(bytes)) >= 0) {
+							zipOutputStream.write(bytes, 0, length);
+						}
+						zipOutputStream.closeEntry();
+					}
+
+					// Subir el archivo ZIP al servidor FTP
+					ftpClient.changeWorkingDirectory(newDirectory); // Asegúrate de estar en el nuevo directorio
+					ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(byteArrayOutputStream.toByteArray());
+					boolean success = ftpClient.storeFile(zipFileName, byteArrayInputStream);
+
+					// Cerrar streams
+					byteArrayInputStream.close();
+
+					if (success) {
+						log.info("Archivo comprimido creado y subido exitosamente: {}", zipFileName);
+						responseModel.setStatus(200);
+						responseModel.setMessage("El archivo prueba.txt ha sido comprimido y subido correctamente.");
+					} else {
+						log.error("Error al subir el archivo ZIP al servidor FTP.");
+						responseModel.setStatus(500);
+						responseModel.setMessage("Error al subir el archivo ZIP al servidor FTP.");
+					}
+
+					ftpClient.completePendingCommand(); // Completar la transferencia
 				} else {
-					log.error("Error al obtener respuesta para el lote: {}", idLote);
+					log.error("El archivo prueba.txt no fue encontrado en el servidor.");
+					responseModel.setStatus(404);
+					responseModel.setMessage("El archivo prueba.txt no fue encontrado en el servidor.");
+				}
+			} else {
+				log.error("No se pudo conectar al servidor FTP.");
+				responseModel.setStatus(500);
+				responseModel.setMessage("No se pudo conectar al servidor FTP.");
+			}
+		} catch (Exception e) {
+			log.error("Error al leer y comprimir archivos desde FTP: ", e);
+			responseModel.setStatus(500);
+			responseModel.setMessage("Error al leer y comprimir archivos desde FTP: " + e.getMessage());
+		} finally {
+			if (ftpClient != null) {
+				try {
+					ftpClient.logout();
+					ftpClient.disconnect();
+				} catch (IOException e) {
+					log.error("Error al desconectar del servidor FTP", e);
 				}
 			}
+			if (inputStream != null) {
+				try {
+					inputStream.close(); // Asegurarse de cerrar el InputStream
+				} catch (IOException e) {
+					log.error("Error al cerrar InputStream", e);
+				}
+			}
+			try {
+				byteArrayOutputStream.close(); // Cerrar ByteArrayOutputStream
+			} catch (IOException e) {
+				log.error("Error al cerrar ByteArrayOutputStream", e);
+			}
+		}
 
-			String resultado = resultadoFinal.toString(); // Convertir el StringBuilder a String
+		return responseModel;
+	}
 
-			if (resultado.isEmpty()) {
-				log.error("No se obtuvieron datos del procedimiento, resultado es null o vacío.");
-				return null;
+	private void compressToZip(InputStream inputStream, String zipFilePath) {
+		try (FileOutputStream fos = new FileOutputStream(zipFilePath);
+			 ZipOutputStream zipOut = new ZipOutputStream(fos)) {
+			ZipEntry zipEntry = new ZipEntry("archivo.txt"); // Nombrar el archivo dentro del zip
+			zipOut.putNextEntry(zipEntry);
+
+			byte[] bytes = new byte[1024];
+			int length;
+			while ((length = inputStream.read(bytes)) >= 0) {
+				zipOut.write(bytes, 0, length);
 			}
 
-			log.info("Resultado del procedimiento: {}", resultado);
+			zipOut.closeEntry();
+		} catch (IOException e) {
+			log.error("Error al comprimir el archivo a .zip", e);
+		}
+	}
 
 
+	public ResponseModel moverArchivoEnFTP() {
+		FTPClient ftpClient = null;
+		ResponseModel responseModel = new ResponseModel();
 
-			//********************************************************************************************************************************************
+		String host = "180.183.174.156"; // Dirección del servidor FTP
+		ConsultarConfiguarcionDTO datos = new ConsultarConfiguarcionDTO();
+		datos.setDescriptor("FU");
 
+		// Obtener configuración del usuario
+		List<ParametrosDTO> parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();
+		String usuario = parametrosPivot.get(0).getValorConfigurado();
 
-			log.info("Se inicia el proceso de consulta de base de datos para determinar la data de envío");
-			log.info("Iniciando proceso");
-			FTPClient ftpClient = null;
-			ConsultarConfiguarcionDTO datos = new ConsultarConfiguarcionDTO();
+		// Obtener configuración de la contraseña
+		datos.setDescriptor("FP");
+		parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();
+		String password = parametrosPivot.get(0).getValorConfigurado();
 
-			// Obtener configuración del host FTP
-			datos.setDescriptor("FH");
-			List<ParametrosDTO> parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();
-			String host = parametrosPivot.get(0).getValorConfigurado();
+		String path = "/home/ftpd0326/giom/recive/";
+		String fileName = "GIOM_RSP101.VE241127115229";
+		String newFilePath = "giomrespaldo/" + fileName; // Solo dejar la ruta relativa para el nuevo archivo
 
-			// Obtener configuración de la contraseña
-			datos.setDescriptor("FP");
-			parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();
-			String password = parametrosPivot.get(0).getValorConfigurado();
-
-			// Obtener configuración del usuario
-			datos.setDescriptor("FU");
-			parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();
-			String usuario = parametrosPivot.get(0).getValorConfigurado();
-
-			log.info("Iniciando consulta de documentos XML en el servidor FTP");
-			log.info("Host FTP: \r\n " + host + " \r\n Contraseña de directorio remoto: " + password + " \r\n Usuario: " + usuario);
-			log.info("Iniciando conexión");
-
+		try {
 			ftpClient = FtpUtil.getFTPClient(host, 21, usuario, password);
 
 			if (ftpClient.isConnected()) {
-				log.info("Conexión establecida correctamente con el FTP");
-				byte[] textoDecomposed = resultado.getBytes(StandardCharsets.UTF_8);
-				InputStream is = new ByteArrayInputStream(textoDecomposed);
+				ftpClient.enterLocalPassiveMode();
 
+				// Cambiar al directorio de origen
+				if (!ftpClient.changeWorkingDirectory(path)) {
+					log.error("No se pudo cambiar al directorio: {}", path);
+					responseModel.setStatus(500);
+					responseModel.setMessage("No se pudo cambiar al directorio en el servidor FTP.");
+					return responseModel;
+				} else {
+					log.info("Cambiado al directorio: {}", path);
+				}
+
+				// Verificar si el archivo existe
+				FTPFile[] files = ftpClient.listFiles();
+				boolean fileExists = Arrays.stream(files).anyMatch(f -> f.getName().equals(fileName));
+				if (!fileExists) {
+					responseModel.setStatus(500);
+					responseModel.setMessage("El archivo no existe en el directorio de origen.");
+					return responseModel;
+				}
+
+				// Intentar mover el archivo al directorio de respaldo
+				if (ftpClient.rename(fileName, newFilePath)) {
+					responseModel.setStatus(200);
+					responseModel.setMessage("Archivo movido exitosamente a: " + newFilePath);
+				} else {
+					int replyCode = ftpClient.getReplyCode(); // Obtener el código de respuesta
+					String replyString = ftpClient.getReplyString(); // Obtener mensaje de respuesta
+					log.error("No se pudo mover el archivo. Código de respuesta: {}, Mensaje: {}", replyCode, replyString);
+					responseModel.setStatus(500);
+					responseModel.setMessage("Error al mover el archivo: " + replyString);
+				}
+			} else {
+				log.error("No se pudo conectar al servidor FTP.");
+				responseModel.setStatus(500);
+				responseModel.setMessage("No se pudo conectar al servidor FTP.");
+			}
+		} catch (Exception e) {
+			log.error("Error al mover el archivo en FTP", e);
+			responseModel.setStatus(500);
+			responseModel.setMessage("Error al mover el archivo en FTP: " + e.getMessage());
+		} finally {
+			if (ftpClient != null) {
 				try {
-					boolean success = ftpClient.storeFile("'VALT.GOFI.BAT1SBAS.GOJT0101.ENTRADA'", is);
-					log.info("Código de respuesta FTP al tratar de registrar VALT.GOFI.BAT1SBAS.GOJT0101.ENTRADA "
-							+ ftpClient.getReplyCode() + " El valor de ftpClient es : " + ftpClient);
-					log.info("Mensaje de respuesta FTP al tratar de registrar VALT.GOFI.BAT1SBAS.GOJT0101.ENTRADA "
+					ftpClient.logout();
+					ftpClient.disconnect();
+				} catch (IOException e) {
+					log.error("Error al desconectar del servidor FTP", e);
+				}
+			}
+		}
+		return responseModel;
+	}
+
+
+
+	public ResponseModel leerArchivoDesdeFTP2() {
+		FTPClient ftpClient = null; // Inicializar el FTPClient
+		InputStream inputStream = null;
+		ResponseModel responseModel = new ResponseModel();
+
+		// Establecer el host FTP directamente
+		String host = "180.183.174.156"; // Dirección del servidor FTP
+		// Crear un objeto para consultar la configuración
+		ConsultarConfiguarcionDTO datos = new ConsultarConfiguarcionDTO();
+
+		// Obtener configuración del usuario
+		datos.setDescriptor("FU");
+		List<ParametrosDTO> parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();
+		String usuario = parametrosPivot.get(0).getValorConfigurado();
+
+		// Obtener configuración de la contraseña
+		datos.setDescriptor("FP");
+		parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();
+		String password = parametrosPivot.get(0).getValorConfigurado();
+
+		// Configurar el path y el nombre del archivo
+		String path = "/home/ftpd0326/giom/recive/"; // Asegúrate de que el path sea correcto
+		String fileName = "GIOM_RSP101.VE241219115605"; // Nombre del archivo a leer
+
+		try {
+			ftpClient = FtpUtil.getFTPClient(host, 21, usuario, password); // Usar FtpUtil para obtener el cliente FTP
+
+			if (ftpClient.isConnected()) {
+				ftpClient.enterLocalPassiveMode(); // Cambia a modo pasivo
+
+				// Cambiar al directorio donde se encuentra el archivo
+				if (!ftpClient.changeWorkingDirectory(path)) {
+					log.error("No se pudo cambiar al directorio: {}", path);
+					responseModel.setStatus(500);
+					responseModel.setMessage("No se pudo cambiar al directorio en el servidor FTP.");
+					return responseModel;
+				}
+
+				inputStream = ftpClient.retrieveFileStream(fileName);
+
+				if (inputStream != null) {
+					BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+					StringBuilder contenido = new StringBuilder();
+					String line;
+					while ((line = reader.readLine()) != null) {
+						contenido.append(line).append("\n");
+					}
+					reader.close();
+
+					// Llamar al método para parsear el contenido
+					List<LoteDTO> lotes = parsearTexto(contenido.toString());
+
+					responseModel.setData(lotes); // Establecer la lista de lotes en el ResponseModel
+					// responseModel.setData(contenido.toString()); // Establecer el contenido en el ResponseModel
+					responseModel.setStatus(200); // Código de éxito
+				} else {
+					log.error("El archivo no fue encontrado en el servidor.");
+					responseModel.setStatus(404); // Archivo no encontrado
+					responseModel.setMessage("El archivo no fue encontrado en el servidor.");
+				}
+			} else {
+				log.error("No se pudo conectar al servidor FTP.");
+				responseModel.setStatus(500); // Error de conexión
+				responseModel.setMessage("No se pudo conectar al servidor FTP.");
+			}
+		} catch (Exception e) {
+			log.error("Error al leer el archivo desde FTP", e);
+			responseModel.setStatus(500); // Error interno del servidor
+			responseModel.setMessage("Error al leer el archivo desde FTP: " + e.getMessage());
+		} finally {
+			if (inputStream != null) {
+				try {
+					inputStream.close();
+				} catch (IOException e) {
+					log.error("Error al cerrar el InputStream", e);
+				}
+			}
+			if (ftpClient != null) {
+				try {
+					ftpClient.logout();
+					ftpClient.disconnect();
+				} catch (IOException e) {
+					log.error("Error al desconectar del servidor FTP", e);
+				}
+			}
+		}
+		return responseModel;
+	}
+
+
+
+	public ResponseModel ejecutarFtpAutomatico2() {
+		log.info("Iniciando el proceso asincrónico de mainframe automáticamente");
+
+		//********** LOGICA PARA OBTENER EL ID DE LOS LOTES, EXTRAER TODA LA DATA DE SUS ARCHIVOS.TXT Y ENVIARLA A TRAVES DE UN ARRAY **********
+
+
+		// Llamar al método obtenerLotesActivos para obtener los valores
+		ResponseModel lotesActivosResponse = obtenerLotesActivos();
+		String valores = (String) lotesActivosResponse.getData(); // Obtener el resultado como String
+
+		if (valores == null || valores.isEmpty()) {
+			log.error("No se obtuvieron IDs de lotes activos.");
+			return null;
+		}
+
+		String[] idLotesArray = valores.split(","); // Suponiendo que los IDs están separados por comas
+		StringBuilder resultadoFinal = new StringBuilder();
+
+		for (String idLote : idLotesArray) {
+			ResponseModel respuestaProcedimiento = obtenerRespuestaDelProcedimiento(idLote.trim());
+
+			if (respuestaProcedimiento.getStatus() == 200) {
+				// Obtener la lista de LoteDTO
+				List<LoteDTO> resultados = (List<LoteDTO>) respuestaProcedimiento.getData();
+				// Convertir la lista de LoteDTO a un String
+				for (LoteDTO lote : resultados) {
+					// Aquí debes definir cómo quieres convertir cada LoteDTO a String
+					resultadoFinal.append(lote.toFormattedString()).append("\n"); // Asegúrate de que LoteDTO tenga un método toString adecuado
+				}
+			} else {
+				log.error("Error al obtener respuesta para el lote: {}", idLote);
+			}
+		}
+
+		String resultado = resultadoFinal.toString(); // Convertir el StringBuilder a String
+
+		if (resultado.isEmpty()) {
+			log.error("No se obtuvieron datos del procedimiento, resultado es null o vacío.");
+			return null;
+		}
+
+		log.info("Resultado del procedimiento: {}", resultado);
+
+
+
+		//********************************************************************************************************************************************
+
+
+		log.info("Se inicia el proceso de consulta de base de datos para determinar la data de envío");
+		log.info("Iniciando proceso");
+		FTPClient ftpClient = null;
+		ConsultarConfiguarcionDTO datos = new ConsultarConfiguarcionDTO();
+
+		// Obtener configuración del host FTP
+		datos.setDescriptor("FH");
+		List<ParametrosDTO> parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();
+		String host = parametrosPivot.get(0).getValorConfigurado();
+
+		// Obtener configuración de la contraseña
+		datos.setDescriptor("FP");
+		parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();
+		String password = parametrosPivot.get(0).getValorConfigurado();
+
+		// Obtener configuración del usuario
+		datos.setDescriptor("FU");
+		parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();
+		String usuario = parametrosPivot.get(0).getValorConfigurado();
+
+		log.info("Iniciando consulta de documentos XML en el servidor FTP");
+		log.info("Host FTP: \r\n " + host + " \r\n Contraseña de directorio remoto: " + password + " \r\n Usuario: " + usuario);
+		log.info("Iniciando conexión");
+
+		ftpClient = FtpUtil.getFTPClient(host, 21, usuario, password);
+
+		if (ftpClient.isConnected()) {
+			log.info("Conexión establecida correctamente con el FTP");
+			byte[] textoDecomposed = resultado.getBytes(StandardCharsets.UTF_8);
+			InputStream is = new ByteArrayInputStream(textoDecomposed);
+
+			try {
+				boolean success = ftpClient.storeFile("'VALT.GOFI.BAT1SBAS.GOJT0101.ENTRADA'", is);
+				log.info("Código de respuesta FTP al tratar de registrar VALT.GOFI.BAT1SBAS.GOJT0101.ENTRADA "
+						+ ftpClient.getReplyCode() + " El valor de ftpClient es : " + ftpClient);
+				log.info("Mensaje de respuesta FTP al tratar de registrar VALT.GOFI.BAT1SBAS.GOJT0101.ENTRADA "
+						+ ftpClient.getReplyString());
+
+				if (success && ftpClient.getReplyCode() == 250) {
+					log.info("Escritura correcta en el mainframe");
+					byte[] flagDecomposed = "PROCESO COMPLETADO".getBytes(StandardCharsets.UTF_8);
+					InputStream flagStream = new ByteArrayInputStream(flagDecomposed);
+					success = ftpClient.storeFile("'VALT.GOFI.BAT1SBAS.GOJT0101.FLAG'", flagStream);
+					log.info("Código de respuesta FTP al tratar de registrar VALT.GOFI.BAT1SBAS.GOJT0101.FLAG "
+							+ ftpClient.getReplyCode());
+					log.info("Mensaje de respuesta FTP al tratar de registrar VALT.GOFI.BAT1SBAS.GOJT0101.FLAG "
 							+ ftpClient.getReplyString());
 
 					if (success && ftpClient.getReplyCode() == 250) {
-						log.info("Escritura correcta en el mainframe");
-						byte[] flagDecomposed = "PROCESO COMPLETADO".getBytes(StandardCharsets.UTF_8);
-						InputStream flagStream = new ByteArrayInputStream(flagDecomposed);
-						success = ftpClient.storeFile("'VALT.GOFI.BAT1SBAS.GOJT0101.FLAG'", flagStream);
-						log.info("Código de respuesta FTP al tratar de registrar VALT.GOFI.BAT1SBAS.GOJT0101.FLAG "
-								+ ftpClient.getReplyCode());
-						log.info("Mensaje de respuesta FTP al tratar de registrar VALT.GOFI.BAT1SBAS.GOJT0101.FLAG "
-								+ ftpClient.getReplyString());
+						log.info("Proceso ejecutado correctamente, procediendo a modificar los estados de los lotes y transacciones");
+						ArrayList<LoteMainframe> listaLotesEjecutar = this.consultarListaLotesMainframe();
+						List<String> idLotes = new ArrayList<>();
+						List<String> idTransacciones = new ArrayList<>();
 
-						if (success && ftpClient.getReplyCode() == 250) {
-							log.info("Proceso ejecutado correctamente, procediendo a modificar los estados de los lotes y transacciones");
-							ArrayList<LoteMainframe> listaLotesEjecutar = this.consultarListaLotesMainframe();
-							List<String> idLotes = new ArrayList<>();
-							List<String> idTransacciones = new ArrayList<>();
+						for (LoteMainframe guardarLoteDTO : listaLotesEjecutar) {
+							idLotes.add(guardarLoteDTO.getIdlote());
+						}
 
-							for (LoteMainframe guardarLoteDTO : listaLotesEjecutar) {
-								idLotes.add(guardarLoteDTO.getIdlote());
-							}
-
-							boolean loteOk = this.cambiarEstatusLoteMasivo("L", idLotes);
-							if (loteOk) {
-								boolean transaccionOk = this.cambiarEstatusTransaccionMasivo("L", idTransacciones);
-								if (transaccionOk) {
-									log.info("Estados de lotes y transacciones actualizados correctamente.");
-								} else {
-									log.error("Error al actualizar los estados de las transacciones.");
-								}
+						boolean loteOk = this.cambiarEstatusLoteMasivo("L", idLotes);
+						if (loteOk) {
+							boolean transaccionOk = this.cambiarEstatusTransaccionMasivo("L", idTransacciones);
+							if (transaccionOk) {
+								log.info("Estados de lotes y transacciones actualizados correctamente.");
 							} else {
-								log.error("Error al actualizar los estados de los lotes.");
+								log.error("Error al actualizar los estados de las transacciones.");
 							}
 						} else {
-							log.error("Falla al escribir flag en el mainframe");
-							log.error("Código de respuesta FTP " + ftpClient.getReplyCode());
-							log.error("Mensaje de respuesta FTP " + ftpClient.getReplyString());
+							log.error("Error al actualizar los estados de los lotes.");
 						}
 					} else {
-						log.error("Falla al escribir data en el mainframe");
+						log.error("Falla al escribir flag en el mainframe");
 						log.error("Código de respuesta FTP " + ftpClient.getReplyCode());
 						log.error("Mensaje de respuesta FTP " + ftpClient.getReplyString());
 					}
-				} catch (Exception e) {
-					log.error("No fue posible ejecutar el proceso asincrónico", e);
-				} finally {
-					try {
-						is.close();
-					} catch (IOException e) {
-						log.error("Error al cerrar el InputStream", e);
-					}
+				} else {
+					log.error("Falla al escribir data en el mainframe");
+					log.error("Código de respuesta FTP " + ftpClient.getReplyCode());
+					log.error("Mensaje de respuesta FTP " + ftpClient.getReplyString());
 				}
-			} else {
-				log.info("Fallo la conexión con el FTP");
+			} catch (Exception e) {
+				log.error("No fue posible ejecutar el proceso asincrónico", e);
+			} finally {
+				try {
+					is.close();
+				} catch (IOException e) {
+					log.error("Error al cerrar el InputStream", e);
+				}
 			}
+		} else {
+			log.info("Fallo la conexión con el FTP");
+		}
 
-			try {
-				ftpClient.disconnect();
-				log.info("Código de respuesta desconexión FTP " + ftpClient.getReplyCode());
-				log.info("Mensaje de respuesta desconexión FTP " + ftpClient.getReplyString());
-			} catch (IOException ex) {
-				log.error("No fue posible la desconexión con el servidor FTP", ex);
-			}
+		try {
+			ftpClient.disconnect();
+			log.info("Código de respuesta desconexión FTP " + ftpClient.getReplyCode());
+			log.info("Mensaje de respuesta desconexión FTP " + ftpClient.getReplyString());
+		} catch (IOException ex) {
+			log.error("No fue posible la desconexión con el servidor FTP", ex);
+		}
 
 		return null;
 	}
-	
-	
-	
-	
-	
+
+
+
+
+
 	public ResponseModel ejecutarFtpAutomatico() {
 		log.info("Iniciando el proceso asincrónico de mainframe automáticamente");
 
@@ -3755,11 +4077,11 @@ public class GiomDao {
 
 		return null;
 	}
-	
-	
-	
-	
-	
+
+
+
+
+
 
 	private String agregarCeros(int length, int cantidadDigitos, String numeroProgramable, String CaracterAgregar) {
 		String ceros = "";
@@ -3830,7 +4152,7 @@ public class GiomDao {
 		}
 		log.info("fin de proceso de mover los documentos de directorio");
 		log.info("Inicio del proceso de respaldado de fatos");
-		this.respaldarDirectorio(); 
+		this.respaldarDirectorio();
 		log.info("Fin del proceso de respaldado de fatos");
 		return false;
 	}
@@ -3881,17 +4203,17 @@ public class GiomDao {
 			for (String sourceFile : listado) {
 				log.info("resguardando el archivo: " + respaldoPath + "/" + sourceFile);
 				File fileToZip = new File(respaldoPath + "/" + sourceFile);
-				FileInputStream fis = new FileInputStream(fileToZip);				
-				ZipEntry zipEntry = new ZipEntry(fileToZip.getName());				
+				FileInputStream fis = new FileInputStream(fileToZip);
+				ZipEntry zipEntry = new ZipEntry(fileToZip.getName());
 				zipOut.putNextEntry(zipEntry);
 				byte[] bytes = new byte[1024];
 				int length;
 				while ((length = fis.read(bytes)) >= 0) {
 					zipOut.write(bytes, 0, length);
-				}			
+				}
 				fis.close();
-	            ZipInputStream zis = new ZipInputStream(new FileInputStream(dest));
-	            ZipEntry ze = zis.getNextEntry();
+				ZipInputStream zis = new ZipInputStream(new FileInputStream(dest));
+				ZipEntry ze = zis.getNextEntry();
 				log.info("Se procedera a eliminar el archivo: " + respaldoPath + "/" + sourceFile+ " que fue resguardado previamente. ");
 				if (fileToZip.delete()) {
 					log.info("Archivo destruido con exito. ");
@@ -3910,10 +4232,10 @@ public class GiomDao {
 		try {
 			log.info("inicio del proceso de cifrado de data");
 			System.out.println("clave de cifrado: "+ SecretKeyData);
-			CifradoData cifradoData = new CifradoData(); 
+			CifradoData cifradoData = new CifradoData();
 			String dataAEncriptar="El texto a encriptar";
 			System.out.println("lo que vamos a encriptar es: "+ dataAEncriptar);
-			String data =cifradoData.encript(dataAEncriptar,SecretKeyData); 
+			String data =cifradoData.encript(dataAEncriptar,SecretKeyData);
 			System.out.println("encriptar "+data);
 			System.out.println("desencriptar "+cifradoData.decrypt(data,SecretKeyData));
 		} catch (Exception e) {
@@ -3921,6 +4243,6 @@ public class GiomDao {
 		}
 		return false;
 	}
-	
-	
+
+
 }

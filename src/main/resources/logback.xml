@@ -9,7 +9,7 @@
     </springProfile>
     <springProfile name="prod">
         <appender name="FILE-ROLLING" class="ch.qos.logback.core.rolling.RollingFileAppender">
-            <file>/home/oraclew/Oracle/Middleware/Oracle_Home/user_projects/domains/java_domain/servers/AdminServer/upload/giom.log</file>
+            <file>/home/administrator/Oracle/Middleware/Oracle_Home/user_projects/domains/java_domain/servers/AdminServer/upload/giom.log</file>
             <!--   ASI LO TENGO EN EL LOCAL <file>/home/oraclew/Oracle/Middleware/Oracle_Home/user_projects/domains/java_domain/servers/wls_giom_n1/logs/giom.log</file>  -->
             <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
                 <fileNamePattern>logs/archived/app.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
