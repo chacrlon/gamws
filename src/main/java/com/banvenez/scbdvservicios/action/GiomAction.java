@@ -20,7 +20,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -50,6 +52,102 @@ public class GiomAction {
 		return giomService.leer(objetoElquetal.getFile(), objetoElquetal.getIdlote(),
 				objetoElquetal.getNombrearchivo());
 	}
+
+
+	@PostMapping("/examinar-archivo-respaldo")
+	public ResponseModel examinarArchivoRespaldo(@RequestBody Map<String, String> request) {
+		String nombreArchivo = request.get("nombreArchivo");
+
+		ResponseModel response = new ResponseModel();
+
+		if (nombreArchivo == null) {
+			response.setStatus(400);
+			response.setMessage("Se requiere 'nombreArchivo'");
+			return response;
+		}
+
+		return giomService.examinarArchivoRespaldo(nombreArchivo);
+	}
+
+	@PostMapping("/comparar-archivo")
+	public ResponseModel compararArchivoConRespaldo(@RequestBody Map<String, String> request) {
+		String nombreArchivo = request.get("nombreArchivo");
+
+		ResponseModel response = new ResponseModel();
+
+		if (nombreArchivo == null) {
+			response.setStatus(400);
+			response.setMessage("Se requiere 'nombreArchivo'");
+			return response;
+		}
+
+		return giomService.compararArchivoConRespaldo(nombreArchivo);
+	}
+
+	// También puedes agregar la versión GET para facilitar pruebas
+	@GetMapping("/comparar-archivo/{nombreArchivo}")
+	public ResponseModel compararArchivoConRespaldoGet(@PathVariable String nombreArchivo) {
+		return giomService.compararArchivoConRespaldo(nombreArchivo);
+	}
+
+	// También podemos agregar un endpoint GET para facilitar las pruebas
+	@GetMapping("/examinar-archivo-respaldo/{nombreArchivo}")
+	public ResponseModel examinarArchivoRespaldoGet(@PathVariable String nombreArchivo) {
+		return giomService.examinarArchivoRespaldo(nombreArchivo);
+	}
+
+	// NUEVOS ENDPOINTS PARA DEBUG
+	@PostMapping("/descargar-archivo-contenido")
+	public ResponseModel descargarArchivoContenido(@RequestBody Map<String, String> request) {
+		String nombreArchivo = request.get("nombreArchivo");
+
+		ResponseModel response = new ResponseModel();
+
+		if (nombreArchivo == null) {
+			response.setStatus(400);
+			response.setMessage("Se requiere 'nombreArchivo'");
+			return response;
+		}
+
+		return giomService.descargarArchivoContenidoFTP(nombreArchivo);
+	}
+
+	// Opcional: endpoint GET para facilitar las pruebas
+	@GetMapping("/ver-archivo/{nombreArchivo}")
+	public ResponseModel verArchivo(@PathVariable String nombreArchivo) {
+		return giomService.descargarArchivoContenidoFTP(nombreArchivo);
+	}
+
+	@GetMapping("/listar-archivos-respaldo")
+	public ResponseModel listarArchivosEnRespaldo() {
+		return giomService.listarArchivosEnRespaldo();
+	}
+
+	@GetMapping("/listar-archivos-ftp")
+	public ResponseModel listarArchivosFTP() {
+		return giomService.listarArchivosFTP();
+	}
+	
+	
+	@GetMapping("/api/memory-status")
+    public ResponseModel getMemoryStatistics() {
+        Runtime runtime = Runtime.getRuntime();
+        long maxMemory = runtime.maxMemory();
+        long allocatedMemory = runtime.totalMemory();
+        long freeMemory = runtime.freeMemory();
+        long usedMemory = allocatedMemory - freeMemory;
+        
+        Map<String, String> memoryInfo = new HashMap<>();
+        memoryInfo.put("maxMemory", String.valueOf(maxMemory / (1024 * 1024)) + " MB");
+        memoryInfo.put("usedMemory", String.valueOf(usedMemory / (1024 * 1024)) + " MB");
+        memoryInfo.put("freeMemory", String.valueOf(freeMemory / (1024 * 1024)) + " MB");
+        memoryInfo.put("totalFreeMemory", String.valueOf((freeMemory + (maxMemory - allocatedMemory)) / (1024 * 1024)) + " MB");
+        
+        ResponseModel response = new ResponseModel();
+        response.setData(memoryInfo);
+        response.setStatus(200);
+        return response;
+    }
 
 	@PostMapping(value = "/guardar-datos-lote")
 	public ResponseModel guardarlote(@RequestBody GuardarLoteDTO datos) {
@@ -315,35 +413,30 @@ public class GiomAction {
 		return giomService.ejecutarFtp();
 
 	}
-	
-	@PostMapping(value = "/ejecutarFtpAutomatico")
-	public ResponseModel ejecutarFtpAutomatico() {
-		log.info("consultarunidades => {}");
-		return giomService.ejecutarFtpAutomatico();
 
-	}
 
-	@PostMapping(value = "/ejecutarFtpAutomatico2")
-	public ResponseModel ejecutarFtpAutomatico2() {
-		log.info("consultarunidades => {}");
-		return giomService.ejecutarFtpAutomatico2();
-
+	@PostMapping(value = "/eliminarArchivosFTP")
+	public ResponseModel eliminarArchivosFTP() {
+		log.info("Solicitada eliminación de archivos GIOM_RSP101");
+		return giomService.eliminarArchivosFTP();
 	}
 
 
-	@GetMapping(value = "/datosPorLote/{idLotes}")  
-    public ResponseModel obtenerRespuestaDelProcedimiento(@PathVariable String idLotes) {  
+
+
+	@GetMapping(value = "/datosPorLote/{idLotes}")
+    public ResponseModel obtenerRespuestaDelProcedimiento(@PathVariable String idLotes) {
 		log.info("Ejecutando consulta de datos por lote: {}", idLotes);
-        return giomService.obtenerRespuestaDelProcedimiento(idLotes);  
+        return giomService.obtenerRespuestaDelProcedimiento(idLotes);
     }
-	
+
 	@PostMapping(value = "/ejecutarRecepcion")
 	public ResponseModel ejecutarRecepcion() {
 		log.info("consultarunidades => {}");
 		return giomService.ejecutarRecepcion();
 
 	}
-	
+
 	
 	@PostMapping(value = "/listarArchivosEnDirectorio")  
     public ResponseModel listarArchivosEnDirectorio() {  

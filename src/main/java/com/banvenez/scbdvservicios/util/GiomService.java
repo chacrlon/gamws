@@ -2,7 +2,7 @@ package com.banvenez.scbdvservicios.util;
 
 import com.banvenez.scbdvservicios.dao.GiomDao;
 import com.banvenez.scbdvservicios.dto.*;
-
+import java.util.concurrent.CopyOnWriteArrayList;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.PredicateUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,8 +32,101 @@ import javax.servlet.http.HttpServletResponse;
 @Slf4j
 @Service
 public class GiomService {
+	private final List<String> logs = new CopyOnWriteArrayList<>();
+
 	@Autowired
 	GiomDao giomDao;
+
+	// En GiomService.java
+	public List<String> getLogs() {
+		return new ArrayList<>(logs); // Retorna una copia de la lista de logs
+	}
+
+	// NUEVOS MÉTODOS PARA DEBUG
+	public ResponseModel listarArchivosFTP() {
+		return giomDao.listarArchivosFTP();
+	}
+
+	public ResponseModel listarArchivosEnRespaldo() {
+		return giomDao.listarArchivosEnRespaldo();
+	}
+
+	public ResponseModel descargarArchivoContenidoFTP(String nombreArchivo) {
+		return giomDao.descargarArchivoContenidoFTP(nombreArchivo);
+	}
+
+	public ResponseModel examinarArchivoRespaldo(String nombreArchivo) {
+		return giomDao.examinarArchivoRespaldo(nombreArchivo);
+	}
+
+	public ResponseModel compararArchivoConRespaldo(String nombreArchivo) {
+		ResponseModel response = new ResponseModel();
+
+		try {
+			log.info("=== COMPARANDO ARCHIVO ACTUAL VS RESPALDO ===");
+			log.info("Archivo: {}", nombreArchivo);
+
+			// 1. Obtener archivo actual a través del DAO
+			ResponseModel respuestaActual = giomDao.descargarArchivoContenidoFTP(nombreArchivo);
+
+			// 2. Obtener archivo en respaldo a través del DAO
+			ResponseModel respuestaRespaldo = giomDao.examinarArchivoRespaldo(nombreArchivo);
+
+			Map<String, Object> comparacion = new HashMap<>();
+			comparacion.put("nombreArchivo", nombreArchivo);
+			comparacion.put("fechaComparacion", new Date());
+
+			// Analizar estado actual
+			if (respuestaActual.getStatus() == 200) {
+				Map<String, Object> dataActual = (Map<String, Object>) respuestaActual.getData();
+				comparacion.put("actualExiste", true);
+				comparacion.put("actualTamaño", dataActual.get("tamañoBytes"));
+				comparacion.put("actualLineas", dataActual.get("numeroLineas"));
+				comparacion.put("actualContenido", dataActual.get("contenido"));
+			} else {
+				comparacion.put("actualExiste", false);
+				comparacion.put("actualError", respuestaActual.getMessage());
+			}
+
+			// Analizar estado en respaldo
+			if (respuestaRespaldo.getStatus() == 200) {
+				Map<String, Object> dataRespaldo = (Map<String, Object>) respuestaRespaldo.getData();
+				comparacion.put("respaldoExiste", true);
+				comparacion.put("respaldoTamaño", dataRespaldo.get("tamañoBytes"));
+				comparacion.put("respaldoLineas", dataRespaldo.get("numeroLineas"));
+				comparacion.put("respaldoContenido", dataRespaldo.get("contenido"));
+				comparacion.put("respaldoContieneEndOfFile", dataRespaldo.get("contieneEndOfFile"));
+			} else {
+				comparacion.put("respaldoExiste", false);
+				comparacion.put("respaldoError", respuestaRespaldo.getMessage());
+			}
+
+			// Determinar si son iguales
+			if (Boolean.TRUE.equals(comparacion.get("actualExiste")) &&
+					Boolean.TRUE.equals(comparacion.get("respaldoExiste"))) {
+
+				String contenidoActual = (String) comparacion.get("actualContenido");
+				String contenidoRespaldo = (String) comparacion.get("respaldoContenido");
+
+				boolean sonIguales = contenidoActual.equals(contenidoRespaldo);
+				comparacion.put("sonIguales", sonIguales);
+
+				log.info("RESULTADO COMPARACIÓN: {}", sonIguales ? "ARCHIVOS IGUALES" : "ARCHIVOS DIFERENTES");
+			}
+
+			response.setStatus(200);
+			response.setMessage("Comparación completada");
+			response.setData(comparacion);
+
+		} catch (Exception e) {
+			log.error("Error en comparación: {}", e.getMessage(), e);
+			response.setStatus(500);
+			response.setMessage("Error en comparación: " + e.getMessage());
+		}
+
+		return response;
+	}
+
 
 	public ResponseModel leer(String file, String id_lote, String nombrearchivo) {  
 	    ResponseModel responseModel = new ResponseModel();  
@@ -409,16 +502,10 @@ public class GiomService {
 		responseModel = giomDao.ejecutarFtp();
 		return responseModel;
 	}
-	
-	public ResponseModel ejecutarFtpAutomatico() {
-		ResponseModel responseModel = new ResponseModel();
-		responseModel = giomDao.ejecutarFtpAutomatico();
-		return responseModel;
-	}
 
-	public ResponseModel ejecutarFtpAutomatico2() {
+	public ResponseModel eliminarArchivosFTP() {
 		ResponseModel responseModel = new ResponseModel();
-		responseModel = giomDao.ejecutarFtpAutomatico2();
+		responseModel = giomDao.eliminarArchivosFTP();
 		return responseModel;
 	}
 	
@@ -481,5 +568,6 @@ public class GiomService {
 		log.info("fin del proceso de cifrado de data ");
 		return null;
 	}
+
 
 }
