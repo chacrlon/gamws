@@ -26,7 +26,7 @@ import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
-
+import java.time.LocalDateTime;
 import javax.servlet.http.HttpServletResponse;
 
 @Slf4j
@@ -37,10 +37,36 @@ public class GiomService {
 	@Autowired
 	GiomDao giomDao;
 
-	// En GiomService.java
-	public List<String> getLogs() {
-		return new ArrayList<>(logs); // Retorna una copia de la lista de logs
+
+	public ResponseModel probarConexionLogs() {
+		return giomDao.probarConexionLogs();
 	}
+
+	// Método para guardar log desde el servicio
+	public ResponseModel guardarLog(String nivel, String mensaje, String metodo, String clase) {
+		// Aquí puedes obtener el usuario e IP real del contexto de seguridad
+		String usuario = "USUARIO_SISTEMA"; // Obtener del contexto de seguridad
+		String ip = "IP_SISTEMA"; // Obtener de la request
+
+		return giomDao.guardarLog(nivel, mensaje, metodo, clase, usuario, ip);
+	}
+
+	// Método para consultar logs (mismo nombre)
+	public ResponseModel consultarLogs(ConsultarLogsDTO consultarLogsDTO) {
+		return giomDao.consultarLogs(consultarLogsDTO);
+	}
+
+	// Método para estadísticas (mismo nombre)
+	public ResponseModel obtenerEstadisticasMemoria() {
+		return giomDao.obtenerEstadisticasMemoria();
+	}
+
+	// Método para obtener logs en memoria (mismo nombre)
+	public List<String> getLogs() {
+		return giomDao.getLogs();
+	}
+
+
 
 	// NUEVOS MÉTODOS PARA DEBUG
 	public ResponseModel listarArchivosFTP() {

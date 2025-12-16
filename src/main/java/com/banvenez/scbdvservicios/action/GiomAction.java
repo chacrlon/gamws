@@ -53,6 +53,24 @@ public class GiomAction {
 				objetoElquetal.getNombrearchivo());
 	}
 
+	@PostMapping(value = "/consultarLogs")
+	public ResponseModel consultarLogs(@RequestBody ConsultarLogsDTO consultarLogsDTO) {
+		log.info("consultarLogs => {}", consultarLogsDTO);
+		return giomService.consultarLogs(consultarLogsDTO);
+	}
+
+	@GetMapping(value = "/estadisticasMemoria")
+	public ResponseModel obtenerEstadisticasMemoria() {
+		log.info("obtenerEstadisticasMemoria");
+		return giomService.obtenerEstadisticasMemoria();
+	}
+
+	@GetMapping(value = "/getLogs")
+	public List<String> getLogs() {
+		log.info("getLogs");
+		return giomService.getLogs();
+	}
+
 
 	@PostMapping("/examinar-archivo-respaldo")
 	public ResponseModel examinarArchivoRespaldo(@RequestBody Map<String, String> request) {
@@ -411,7 +429,6 @@ public class GiomAction {
 	public ResponseModel ejecutarFtp() {
 		log.info("consultarunidades => {}");
 		return giomService.ejecutarFtp();
-
 	}
 
 
