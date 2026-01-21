@@ -28,10 +28,18 @@ import java.util.stream.Stream;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.util.Calendar;
 
 import java.io.*;
 import java.nio.file.*;
 import java.nio.file.attribute.*;
+
+// Importaciones para los endpoints de cobranzas
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+
+// También necesitarás importar el DTO si no lo tienes ya
+import com.banvenez.scbdvservicios.dto.CobranzaDTO;
 
 @RestController
 @Slf4j
@@ -58,6 +66,152 @@ public class GiomAction {
 		log.info("consultarLogs => {}", consultarLogsDTO);
 		return giomService.consultarLogs(consultarLogsDTO);
 	}
+
+
+	// Nuevos endpoints para cobranzas
+	@PostMapping(value = "/obtenerCobranzasPorRangoFecha")
+	public ResponseModel obtenerCobranzasPorRangoFecha(@RequestBody Map<String, Object> params) {
+		try {
+			log.info("obtenerCobranzasPorRangoFecha => {}", params);
+
+			// Parsear fechas desde String (ahora acepta solo fecha "dd/MM/yyyy" o con hora)
+			SimpleDateFormat sdfDateOnly = new SimpleDateFormat("dd/MM/yyyy");
+			SimpleDateFormat sdfWithTime = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+
+			Date fechaInicio;
+			Date fechaFin;
+
+			// Manejar diferentes formatos de fecha
+			String fechaInicioStr = (String) params.get("fechaInicio");
+			String fechaFinStr = (String) params.get("fechaFin");
+
+			// Verificar si la fecha incluye hora
+			if (fechaInicioStr != null && fechaInicioStr.length() <= 10) {
+				fechaInicio = sdfDateOnly.parse(fechaInicioStr);
+				// Establecer hora a 00:00:00
+				Calendar cal = Calendar.getInstance();
+				cal.setTime(fechaInicio);
+				cal.set(Calendar.HOUR_OF_DAY, 0);
+				cal.set(Calendar.MINUTE, 0);
+				cal.set(Calendar.SECOND, 0);
+				fechaInicio = cal.getTime();
+			} else {
+				fechaInicio = sdfWithTime.parse(fechaInicioStr);
+			}
+
+			if (fechaFinStr != null && fechaFinStr.length() <= 10) {
+				fechaFin = sdfDateOnly.parse(fechaFinStr);
+				// Establecer hora a 23:59:59
+				Calendar cal = Calendar.getInstance();
+				cal.setTime(fechaFin);
+				cal.set(Calendar.HOUR_OF_DAY, 23);
+				cal.set(Calendar.MINUTE, 59);
+				cal.set(Calendar.SECOND, 59);
+				fechaFin = cal.getTime();
+			} else {
+				fechaFin = sdfWithTime.parse(fechaFinStr);
+			}
+
+			return giomService.obtenerCobranzasPorRangoFecha(fechaInicio, fechaFin);
+		} catch (Exception e) {
+			log.error("Error al obtener cobranzas por rango de fecha: {}", e.getMessage(), e);
+			ResponseModel response = new ResponseModel();
+			response.setStatus(500);
+			response.setMessage("Error al obtener cobranzas: " + e.getMessage());
+			return response;
+		}
+	}
+
+	@PostMapping(value = "/obtenerResumenCobranzas")
+	public ResponseModel obtenerResumenCobranzas(@RequestBody Map<String, Object> params) {
+		try {
+			log.info("obtenerResumenCobranzas => {}", params);
+
+			// Parsear fechas (pueden ser null o solo fecha)
+			SimpleDateFormat sdfDateOnly = new SimpleDateFormat("dd/MM/yyyy");
+			SimpleDateFormat sdfWithTime = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+
+			Date fechaInicio = null;
+			Date fechaFin = null;
+
+			if (params.get("fechaInicio") != null) {
+				String fechaInicioStr = (String) params.get("fechaInicio");
+				if (fechaInicioStr.length() <= 10) {
+					fechaInicio = sdfDateOnly.parse(fechaInicioStr);
+				} else {
+					fechaInicio = sdfWithTime.parse(fechaInicioStr);
+				}
+			}
+
+			if (params.get("fechaFin") != null) {
+				String fechaFinStr = (String) params.get("fechaFin");
+				if (fechaFinStr.length() <= 10) {
+					fechaFin = sdfDateOnly.parse(fechaFinStr);
+					// Establecer hora a 23:59:59 para incluir todo el día
+					Calendar cal = Calendar.getInstance();
+					cal.setTime(fechaFin);
+					cal.set(Calendar.HOUR_OF_DAY, 23);
+					cal.set(Calendar.MINUTE, 59);
+					cal.set(Calendar.SECOND, 59);
+					fechaFin = cal.getTime();
+				} else {
+					fechaFin = sdfWithTime.parse(fechaFinStr);
+				}
+			}
+
+			return giomService.obtenerResumenCobranzas(fechaInicio, fechaFin);
+		} catch (Exception e) {
+			log.error("Error al obtener resumen de cobranzas: {}", e.getMessage(), e);
+			ResponseModel response = new ResponseModel();
+			response.setStatus(500);
+			response.setMessage("Error al obtener resumen: " + e.getMessage());
+			return response;
+		}
+	}
+
+	@PostMapping(value = "/obtenerCobranzasPorLote")
+	public ResponseModel obtenerCobranzasPorLote(@RequestBody Map<String, Object> params) {
+		try {
+			log.info("obtenerCobranzasPorLote => {}", params);
+
+			// Este endpoint es para obtener cobranzas específicas de un lote
+			// Puedes implementarlo si lo necesitas
+			// Por ahora, vamos a usar el de rango con filtro de ID lote
+			SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+			Date fechaInicio = sdf.parse("01/01/2000 00:00:00"); // Fecha muy antigua
+			Date fechaFin = new Date(); // Fecha actual
+
+			// Primero obtenemos todas las cobranzas y luego filtramos por lote
+			ResponseModel response = giomService.obtenerCobranzasPorRangoFecha(fechaInicio, fechaFin);
+
+			if (response.getStatus() == 200) {
+				List<CobranzaDTO> todasCobranzas = (List<CobranzaDTO>) response.getData();
+				Long idLote = Long.parseLong(params.get("idLote").toString());
+
+				// Filtrar por lote específico
+				List<CobranzaDTO> cobranzasLote = todasCobranzas.stream()
+						.filter(c -> c.getIdLoteGiom().equals(idLote))
+						.collect(Collectors.toList());
+
+				response.setData(cobranzasLote);
+			}
+
+			return response;
+		} catch (Exception e) {
+			log.error("Error al obtener cobranzas por lote: {}", e.getMessage(), e);
+			ResponseModel response = new ResponseModel();
+			response.setStatus(500);
+			response.setMessage("Error al obtener cobranzas por lote: " + e.getMessage());
+			return response;
+		}
+	}
+
+	// Método auxiliar para convertir fechas
+	private Date convertirFecha(String fechaStr) throws ParseException {
+		SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+		return sdf.parse(fechaStr);
+	}
+	
 
 	@GetMapping(value = "/estadisticasMemoria")
 	public ResponseModel obtenerEstadisticasMemoria() {

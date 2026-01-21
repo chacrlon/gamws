@@ -4,6 +4,7 @@ import com.banvenez.scbdvservicios.dto.*;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.sql.*;
 import java.util.*;
 import com.banvenez.scbdvservicios.dto.RowMappers.*;
@@ -3873,6 +3874,70 @@ public class GiomDao {
 					.filter(r -> "99".equals(r.getCod_err()))
 					.count();
 
+			// Calcular monto total recuperado (basado en los DTOs)
+			BigDecimal montoTotalRecuperado = registrosDelLote.stream()
+					.filter(r -> "00".equals(r.getCod_err()))
+					.map(r -> BigDecimal.valueOf(r.getMontoTransaccion()))
+					.reduce(BigDecimal.ZERO, BigDecimal::add);
+
+			String estadoLote = (countW > 0) ? "W" : "P";
+
+			addLogMemoria("📊 Lote {} - Distribución: P:{}, W:{}, R:{} -> Estado: {}",
+					idLote, countP, countW, countR, estadoLote);
+
+			// ====== PRIMERO: ACTUALIZAR ESTADOS DE TRANSACCIONES ======
+			try {
+				Long idLoteLong = Long.parseLong(idLote);
+				ResponseModel updateResponse2 = actualizarRespuestaMainframe2(idLoteLong);
+				if (updateResponse2.getStatus() != 200) {
+					addLogMemoria("⚠️ Advertencia en actualización secundaria lote {}: {}",
+							idLote, updateResponse2.getMessage());
+				} else {
+					addLogMemoria("✅ Estados de transacciones actualizados para lote {}", idLote);
+				}
+			} catch (NumberFormatException e) {
+				addLogError("❌ Error parseando ID lote {}: {}", idLote, e.getMessage());
+			}
+
+			// ====== SEGUNDO: REGISTRAR COBRANZA ======
+			// Solo si hay transacciones procesadas (P) con código 00
+			if (countP > 0 && montoTotalRecuperado.compareTo(BigDecimal.ZERO) >= 0) {
+				ResponseModel cobranzaResponse = registrarCobranzaLote(Long.parseLong(idLote));
+				if (cobranzaResponse.getStatus() == 200) {
+					addLogImportante("💰 Cobranza registrada para lote {}: monto total recuperado: {}",
+							idLote, montoTotalRecuperado);
+				} else {
+					addLogError("❌ Error al registrar cobranza para lote {}: {}",
+							idLote, cobranzaResponse.getMessage());
+				}
+			}
+
+			// ====== TERCERO: ACTUALIZAR ESTADO DEL LOTE ======
+			ResponseModel response = this.actualizarEstadoRegistro(idLote, estadoLote);
+			if (response.getStatus() != 200) {
+				addLogError("⚠️ Error al actualizar estado del lote {}: {}", idLote, response.getMessage());
+			}
+
+		} catch (Exception e) {
+			addLogError("❌ Error en actualización de estados lote {}: {}", idLote, e.getMessage());
+		}
+	}
+
+	/*
+
+	ASI ESTABA EN SU ULTIMA VERSION ESTABLE
+	private void actualizarEstadosLoteMasivo(String idLote, List<LoteDTO> registrosDelLote) {
+		try {
+			long countP = registrosDelLote.stream()
+					.filter(r -> "00".equals(r.getCod_err()))
+					.count();
+			long countW = registrosDelLote.stream()
+					.filter(r -> "50".equals(r.getCod_err()))
+					.count();
+			long countR = registrosDelLote.stream()
+					.filter(r -> "99".equals(r.getCod_err()))
+					.count();
+
 			String estadoLote = (countW > 0) ? "W" : "P";
 
 			addLogMemoria("📊 Lote {} - Distribución: P:{}, W:{}, R:{} -> Estado: {}",
@@ -3896,6 +3961,130 @@ public class GiomDao {
 		} catch (Exception e) {
 			addLogError("❌ Error en actualización de estados lote {}: {}", idLote, e.getMessage());
 		}
+	}
+*/
+
+	// === REPORTES DEL LOTE EN CADA ENVIO DE COBRANZA ===
+
+	public ResponseModel registrarCobranzaLote(Long idLote) {
+		ResponseModel response = new ResponseModel();
+
+		try {
+			SimpleJdbcCall jdbcCall = new SimpleJdbcCall(jdbcTemplate)
+					.withCatalogName("GIOM")
+					.withProcedureName("PRC_REGISTRAR_COBRANZA_LOTE")
+					.withoutProcedureColumnMetaDataAccess()
+					.declareParameters(
+							new SqlParameter("P_ID_LOTE", OracleTypes.NUMBER),
+							new SqlOutParameter("COD_RET", OracleTypes.VARCHAR),
+							new SqlOutParameter("DE_RET", OracleTypes.VARCHAR)
+					);
+
+			MapSqlParameterSource inputMap = new MapSqlParameterSource();
+			inputMap.addValue("P_ID_LOTE", idLote);
+
+			Map<String, Object> resultMap = jdbcCall.execute(inputMap);
+			String codRetorno = (String) resultMap.get("COD_RET");
+			String descRetorno = (String) resultMap.get("DE_RET");
+
+			response.setStatus("1000".equals(codRetorno) ? 200 : 500);
+			response.setMessage(descRetorno);
+
+		} catch (Exception e) {
+			log.error("Error al registrar cobranza para lote {}: {}", idLote, e.getMessage());
+			response.setStatus(500);
+			response.setMessage("Error al registrar cobranza: " + e.getMessage());
+		}
+
+		return response;
+	}
+
+	public ResponseModel obtenerCobranzasPorRangoFecha(Date fechaInicio, Date fechaFin) {
+		ResponseModel response = new ResponseModel();
+
+		try {
+			SimpleJdbcCall jdbcCall = new SimpleJdbcCall(jdbcTemplate)
+					.withCatalogName("GIOM")
+					.withProcedureName("PRC_OBTENER_COBRANZAS_POR_FECHA")
+					.withoutProcedureColumnMetaDataAccess()
+					.declareParameters(
+							new SqlParameter("P_FECHA_INICIO", OracleTypes.TIMESTAMP),
+							new SqlParameter("P_FECHA_FIN", OracleTypes.TIMESTAMP),
+							new SqlOutParameter("P_OUT_DATA", OracleTypes.CURSOR),
+							new SqlOutParameter("COD_RET", OracleTypes.VARCHAR),
+							new SqlOutParameter("DE_RET", OracleTypes.VARCHAR)
+					)
+					.returningResultSet("P_OUT_DATA", new CobranzaRowMapper());
+
+			MapSqlParameterSource inputMap = new MapSqlParameterSource();
+			inputMap.addValue("P_FECHA_INICIO", new java.sql.Timestamp(fechaInicio.getTime()));
+			inputMap.addValue("P_FECHA_FIN", new java.sql.Timestamp(fechaFin.getTime()));
+
+			Map<String, Object> resultMap = jdbcCall.execute(inputMap);
+			String codRetorno = (String) resultMap.get("COD_RET");
+			String descRetorno = (String) resultMap.get("DE_RET");
+			List<CobranzaDTO> cobranzas = (List<CobranzaDTO>) resultMap.get("P_OUT_DATA");
+
+			response.setStatus("1000".equals(codRetorno) ? 200 : 500);
+			response.setMessage(descRetorno);
+			response.setData(cobranzas);
+
+		} catch (Exception e) {
+			log.error("Error al obtener cobranzas por rango de fecha: {}", e.getMessage());
+			response.setStatus(500);
+			response.setMessage("Error al obtener cobranzas: " + e.getMessage());
+		}
+
+		return response;
+	}
+
+	public ResponseModel obtenerResumenCobranzas(Date fechaInicio, Date fechaFin) {
+		ResponseModel response = new ResponseModel();
+
+		try {
+			SimpleJdbcCall jdbcCall = new SimpleJdbcCall(jdbcTemplate)
+					.withCatalogName("GIOM")
+					.withProcedureName("PRC_OBTENER_RESUMEN_COBRANZAS")
+					.withoutProcedureColumnMetaDataAccess()
+					.declareParameters(
+							new SqlParameter("P_FECHA_INICIO", OracleTypes.TIMESTAMP),
+							new SqlParameter("P_FECHA_FIN", OracleTypes.TIMESTAMP),
+							new SqlOutParameter("P_OUT_DATA", OracleTypes.CURSOR),
+							new SqlOutParameter("COD_RET", OracleTypes.VARCHAR),
+							new SqlOutParameter("DE_RET", OracleTypes.VARCHAR)
+					)
+					.returningResultSet("P_OUT_DATA", new ResumenCobranzaRowMapper());
+
+			MapSqlParameterSource inputMap = new MapSqlParameterSource();
+
+			if (fechaInicio != null) {
+				inputMap.addValue("P_FECHA_INICIO", new java.sql.Timestamp(fechaInicio.getTime()));
+			} else {
+				inputMap.addValue("P_FECHA_INICIO", null);
+			}
+
+			if (fechaFin != null) {
+				inputMap.addValue("P_FECHA_FIN", new java.sql.Timestamp(fechaFin.getTime()));
+			} else {
+				inputMap.addValue("P_FECHA_FIN", null);
+			}
+
+			Map<String, Object> resultMap = jdbcCall.execute(inputMap);
+			String codRetorno = (String) resultMap.get("COD_RET");
+			String descRetorno = (String) resultMap.get("DE_RET");
+			List<Map<String, Object>> resumen = (List<Map<String, Object>>) resultMap.get("P_OUT_DATA");
+
+			response.setStatus("1000".equals(codRetorno) ? 200 : 500);
+			response.setMessage(descRetorno);
+			response.setData(resumen);
+
+		} catch (Exception e) {
+			log.error("Error al obtener resumen de cobranzas: {}", e.getMessage());
+			response.setStatus(500);
+			response.setMessage("Error al obtener resumen: " + e.getMessage());
+		}
+
+		return response;
 	}
 
 	// === MONITOREO DE MEMORIA ===

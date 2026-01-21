@@ -87,7 +87,7 @@ public class LoteDTO {
         String codigoOper = agregarCeros(codigoOperacion != null ? String.valueOf(codigoOperacion) : "0", 4);  
         System.out.println("Código Operación: " + codigoOper);
  
-        String montoTransaccionFormatted = agregarCeros(String.valueOf(Math.round(montoTransaccion * 100)), 17); // Multiplicar por 100 y formatear  
+        String montoTransaccionFormatted = agregarCeros(String.valueOf(Math.round(montoTransaccion * 1)), 17); // Multiplicar por 100 y formatear
         System.out.println("Monto Transacción: " + montoTransaccionFormatted);
 
         String libre = agregarCeros(" ", 1);

@@ -67,6 +67,23 @@ public class GiomService {
 	}
 
 
+	// Métodos para cobranzas
+	public ResponseModel registrarCobranzaLote(Long idLote) {
+		return giomDao.registrarCobranzaLote(idLote);
+	}
+
+	public ResponseModel obtenerCobranzasPorRangoFecha(Date fechaInicio, Date fechaFin) {
+		log.info("Begin obtenerCobranzasPorRangoFecha en el Service => fechaInicio: {}, fechaFin: {}",
+				fechaInicio, fechaFin);
+		return giomDao.obtenerCobranzasPorRangoFecha(fechaInicio, fechaFin);
+	}
+
+	public ResponseModel obtenerResumenCobranzas(Date fechaInicio, Date fechaFin) {
+		log.info("Begin obtenerResumenCobranzas en el Service => fechaInicio: {}, fechaFin: {}",
+				fechaInicio, fechaFin);
+		return giomDao.obtenerResumenCobranzas(fechaInicio, fechaFin);
+	}
+
 
 	// NUEVOS MÉTODOS PARA DEBUG
 	public ResponseModel listarArchivosFTP() {
