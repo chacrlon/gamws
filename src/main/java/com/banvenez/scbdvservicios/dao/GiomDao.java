@@ -143,6 +143,34 @@ public class GiomDao {
 		}
 		return response;
 	}
+	
+	public ResponseModel rechazarLote(String idLote, String usuario, String ip) {
+	    ResponseModel response = new ResponseModel();
+	    try {
+	        SimpleJdbcCall jdbcCall = new SimpleJdbcCall(jdbcTemplate)
+	                .withProcedureName("PRC_RECHAZAR_LOTE")
+	                .declareParameters(
+	                    new SqlParameter("P_ID_LOTE", Types.NUMERIC),
+	                    new SqlParameter("P_USUARIO", Types.VARCHAR),
+	                    new SqlParameter("P_IP", Types.VARCHAR),
+	                    new SqlOutParameter("COD_RET", Types.VARCHAR),
+	                    new SqlOutParameter("DE_CODRET", Types.VARCHAR)
+	                );
+	        MapSqlParameterSource params = new MapSqlParameterSource()
+	                .addValue("P_ID_LOTE", Integer.parseInt(idLote))
+	                .addValue("P_USUARIO", usuario)
+	                .addValue("P_IP", ip);
+	        Map<String, Object> result = jdbcCall.execute(params);
+	        response.setCode(Integer.parseInt((String) result.get("COD_RET")));
+	        response.setMessage((String) result.get("DE_CODRET"));
+	        response.setStatus(200);
+	    } catch (Exception e) {
+	        response.setCode(9999);
+	        response.setMessage("Error al rechazar lote: " + e.getMessage());
+	        response.setStatus(500);
+	    }
+	    return response;
+	}
 
 	public ResponseModel cargarArchivo(List<CargaGiomDTO> listaResultado) {
 		log.info("BEGIN " + this.getClass().getSimpleName() + ".cargar registros del archivo({})",
@@ -299,7 +327,54 @@ public class GiomDao {
 
 	}
 
+	public ResponseModel consultar_aprobacion() {
+		ResponseModel response2 = new ResponseModel();
+		ArrayList<GuardarLoteDTO> response = null;
+		try {
+			SimpleJdbcCall jdbcCall = new SimpleJdbcCall(jdbcTemplate)
+					.withCatalogName("GIOM")                      // ← ESQUEMA AGREGADO
+					.withProcedureName("PRC_CONSULTA_LISTA_APROBACION")
+					.withoutProcedureColumnMetaDataAccess()
+					.returningResultSet("P_Result", new ConsultaaprobacionloteRowMapper());
 
+			jdbcCall.declareParameters(
+					new SqlOutParameter("COD_RET", OracleTypes.VARCHAR),
+					new SqlOutParameter("DE_CODRET", OracleTypes.VARCHAR),
+					new SqlOutParameter("P_Result", OracleTypes.CURSOR)
+			);
+
+			MapSqlParameterSource inputMap = new MapSqlParameterSource();
+			Map<String, Object> resultMap = jdbcCall.execute(inputMap);
+
+			response = (ArrayList<GuardarLoteDTO>) resultMap.get("P_Result");
+			String cod_retorno = (String) resultMap.get("COD_RET");
+			String desc_retorno = (String) resultMap.get("DE_CODRET");
+
+			log.info("La consulta => {},{}", cod_retorno, desc_retorno);
+			log.info("RESPUESTA CONSULTA => P_Result = {}", response);
+
+			if (cod_retorno != null && cod_retorno.equals("1000")) {
+				response2.setStatus(200);
+				response2.setCode(Integer.parseInt(cod_retorno));
+				response2.setMessage(desc_retorno);
+				response2.setData(response);
+			} else {
+				response2.setStatus(500);
+				response2.setCode(1001);
+				response2.setMessage("Error en la consulta: " + (desc_retorno != null ? desc_retorno : "Código de retorno no reconocido"));
+			}
+		} catch (Exception e) {
+			log.error("Error en consultar_aprobacion: ", e);
+			response2.setStatus(500);
+			response2.setCode(9999);
+			// Mensaje de error más descriptivo (incluye la causa real)
+			response2.setMessage("Error al consultar PRC_CONSULTA_LISTA_APROBACION: " + e.getMessage()
+					+ (e.getCause() != null ? " - Causa: " + e.getCause().getMessage() : ""));
+		}
+		return response2;
+	}
+
+/*
 	public ResponseModel consultar_aprobacion() {
 		ResponseModel response2 = new ResponseModel();
 		ArrayList<GuardarLoteDTO> response = null;
@@ -342,7 +417,7 @@ public class GiomDao {
 			response2.setStatus(500);
 			return response2;
 		}
-	}
+	}*/
 
 	public ResponseModel consultartransacciones() {
 		ResponseModel response2 = new ResponseModel();
@@ -3922,47 +3997,6 @@ public class GiomDao {
 			addLogError("❌ Error en actualización de estados lote {}: {}", idLote, e.getMessage());
 		}
 	}
-
-	/*
-
-	ASI ESTABA EN SU ULTIMA VERSION ESTABLE
-	private void actualizarEstadosLoteMasivo(String idLote, List<LoteDTO> registrosDelLote) {
-		try {
-			long countP = registrosDelLote.stream()
-					.filter(r -> "00".equals(r.getCod_err()))
-					.count();
-			long countW = registrosDelLote.stream()
-					.filter(r -> "50".equals(r.getCod_err()))
-					.count();
-			long countR = registrosDelLote.stream()
-					.filter(r -> "99".equals(r.getCod_err()))
-					.count();
-
-			String estadoLote = (countW > 0) ? "W" : "P";
-
-			addLogMemoria("📊 Lote {} - Distribución: P:{}, W:{}, R:{} -> Estado: {}",
-					idLote, countP, countW, countR, estadoLote);
-
-			ResponseModel response = this.actualizarEstadoRegistro(idLote, estadoLote);
-			if (response.getStatus() != 200) {
-				addLogError("⚠️ Error al actualizar estado del lote {}: {}", idLote, response.getMessage());
-			}
-
-			try {
-				Long idLoteLong = Long.parseLong(idLote);
-				ResponseModel updateResponse2 = actualizarRespuestaMainframe2(idLoteLong);
-				if (updateResponse2.getStatus() != 200) {
-					addLogMemoria("⚠️ Advertencia en actualización secundaria lote {}: {}", idLote, updateResponse2.getMessage());
-				}
-			} catch (NumberFormatException e) {
-				addLogError("❌ Error parseando ID lote {}: {}", idLote, e.getMessage());
-			}
-
-		} catch (Exception e) {
-			addLogError("❌ Error en actualización de estados lote {}: {}", idLote, e.getMessage());
-		}
-	}
-*/
 
 	// === REPORTES DEL LOTE EN CADA ENVIO DE COBRANZA ===
 

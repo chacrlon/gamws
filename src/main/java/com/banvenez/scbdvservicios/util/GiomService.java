@@ -36,6 +36,11 @@ public class GiomService {
 
 	@Autowired
 	GiomDao giomDao;
+	
+	
+	public ResponseModel rechazarLote(String idLote, String usuario, String ip) {
+	    return giomDao.rechazarLote(idLote, usuario, ip);
+	}
 
 
 	public ResponseModel probarConexionLogs() {

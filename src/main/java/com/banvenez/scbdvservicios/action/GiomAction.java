@@ -50,6 +50,15 @@ public class GiomAction {
 
 	@Autowired
 	GiomService giomService;
+	
+	@PostMapping(value = "/rechazar-lote")
+	public ResponseModel rechazarLote(@RequestBody Map<String, String> request, HttpServletRequest servletRequest) {
+	    String idLote = request.get("idlote");
+	    String usuario = request.get("usuario");
+	    String ip = servletRequest.getRemoteAddr();
+	    log.info("Rechazando lote {} por usuario {}", idLote, usuario);
+	    return giomService.rechazarLote(idLote, usuario, ip);
+	}
 
 
 	@RequestMapping(value = "/leerArchivo-Gion", method = RequestMethod.POST)
