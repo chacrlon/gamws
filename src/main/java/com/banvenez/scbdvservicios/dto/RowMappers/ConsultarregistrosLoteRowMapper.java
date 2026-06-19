@@ -26,10 +26,13 @@ public class ConsultarregistrosLoteRowMapper implements RowMapper<CargaGiomDTO> 
         act.setMontorecuperado(rs.getString("MONTO_RECUPERADO"));
         act.setVef(rs.getString("VEF"));
         act.setNumeroCedula(rs.getString("CEDULA"));
-        
-        act.setFechacarga(rs.getString("FECHA_CARGA_FORMATEADA")); // Usa el nuevo alias
-        act.setEstado(rs.getString("ESTADO_REGISTRO")); // Ahora existe en el resultset
+        act.setFechacarga(rs.getString("FECHA_CARGA_FORMATEADA"));
+        act.setEstado(rs.getString("ESTADO_REGISTRO"));
         act.setEstadoNombre(rs.getString("ESTADO_NOMBRE")); 
+     // Mapear las nuevas columnas de respuesta de Mainframe
+        act.setDescripcionRespuestaMainframe(rs.getString("DESC_RESPUESTA_MAINFRAME"));
+        act.setCodRespuestaMainframe(rs.getString("COD_RESPUESTA_MAINFRAME"));
+        act.setSerialRespuestaMainframe(rs.getString("SERIAL_RESPUESTA_MAINFRAME"));
         return act;
     }
 }

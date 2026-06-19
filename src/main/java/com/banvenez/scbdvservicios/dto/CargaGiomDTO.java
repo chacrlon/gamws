@@ -17,14 +17,12 @@ public class CargaGiomDTO {
     private  String id_lotefk;
     private  String fechacarga;
     private  String montorecuperado;
-    
-    
     private String id_lote;
     private String codRespuestaMainframe; 
     private String descripcionRespuestaMainframe; 
     private String serialRespuestaMainframe; 
-    private String estado;       // Este campo corresponde a ESTADO_REGISTRO (código)
-    private String estadoNombre; // 👈 Nuevo campo para ESTADO_NOMBRE (texto)
+    private String estado;
+    private String estadoNombre;
     
 }
 

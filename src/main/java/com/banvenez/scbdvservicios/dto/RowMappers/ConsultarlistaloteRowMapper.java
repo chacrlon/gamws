@@ -18,7 +18,9 @@ public class ConsultarlistaloteRowMapper implements RowMapper<GuardarLoteDTO> {
         act.setFechaInicio(rs.getString("FECHA_INICIO"));
         act.setFechaFin(rs.getString("FECHA_FIN"));
         act.setNombrearchivo(rs.getString("NOMBRE_ARCHIVO"));
-
+        act.setFechaEnvio(rs.getTimestamp("FECHA_ENVIO"));
+        act.setFechaRecepcion(rs.getTimestamp("FECHA_RECEPCION"));
+        act.setSemaforoEstado(rs.getString("SEMAFORO_ESTADO"));
 
         return act;
     }

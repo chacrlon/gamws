@@ -59,6 +59,11 @@ public class GiomAction {
 	    log.info("Rechazando lote {} por usuario {}", idLote, usuario);
 	    return giomService.rechazarLote(idLote, usuario, ip);
 	}
+	
+	@GetMapping("/semaforo-lotes")
+	public ResponseModel obtenerSemaforoLotes() {
+	    return giomService.obtenerSemaforoLotes();
+	}
 
 
 	@RequestMapping(value = "/leerArchivo-Gion", method = RequestMethod.POST)
@@ -68,6 +73,12 @@ public class GiomAction {
 		log.info("leerArchivo => {}", objetoElquetal.toString());
 		return giomService.leer(objetoElquetal.getFile(), objetoElquetal.getIdlote(),
 				objetoElquetal.getNombrearchivo());
+	}
+
+	@PostMapping(value = "/recuperar-lotes-colgados")
+	public ResponseModel recuperarLotesColgados() {
+		log.info("Solicitada recuperación manual de lotes en 'L' -> 'T'");
+		return giomService.recuperarLotesPorArchivoVacio();
 	}
 
 	@PostMapping(value = "/consultarLogs")

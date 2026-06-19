@@ -374,51 +374,6 @@ public class GiomDao {
 		return response2;
 	}
 
-/*
-	public ResponseModel consultar_aprobacion() {
-		ResponseModel response2 = new ResponseModel();
-		ArrayList<GuardarLoteDTO> response = null;
-		try {
-			SimpleJdbcCall jdbcCall = new SimpleJdbcCall(jdbcTemplate);
-			jdbcCall.withProcedureName("PRC_CONSULTA_LISTA_APROBACION");
-			jdbcCall.withoutProcedureColumnMetaDataAccess();
-			jdbcCall.setFunction(false);
-			jdbcCall.declareParameters(new SqlOutParameter("COD_RET", OracleTypes.VARCHAR),
-					new SqlOutParameter("DE_CODRET", OracleTypes.VARCHAR),
-					new SqlOutParameter("P_Result", oracle.jdbc.OracleTypes.CURSOR)
-			);
-
-			jdbcCall.returningResultSet("P_Result", new ConsultaaprobacionloteRowMapper());
-			MapSqlParameterSource inputMap = new MapSqlParameterSource();
-			jdbcCall.compile();
-			Map<String, Object> resultMap = jdbcCall.execute(inputMap);
-			response = (ArrayList<GuardarLoteDTO>) resultMap.get("P_Result");
-			String cod_retorno = (String) resultMap.get("COD_RET");
-			String desc_retorno = (String) resultMap.get("DE_CODRET");
-			log.info("La consulta => {},{}", cod_retorno, desc_retorno);
-			log.info("RESPUESTA CONSULTA => P_Result = {}", response.toString());
-			if (cod_retorno.equals("1000")) {
-				log.info("La consulta tiene data => {},{}", cod_retorno, desc_retorno);
-				response2.setStatus(200);
-				response2.setCode(Integer.parseInt(cod_retorno));
-				response2.setMessage(desc_retorno);
-				response2.setData(response);
-				return response2;
-			} else {
-				response2.setCode(1001);
-				response2.setMessage("Error en la consulta PRC_CONSULTA_LISTA_APROBACION");
-				response2.setStatus(500);
-				return response2;
-			}
-		} catch (Exception e) {
-			log.error(e.getMessage(), e);
-			response2.setCode(9999);
-			response2.setMessage("ERROR al  consultar PRC_CONSULTA_LISTA_APROBACION Exception");
-			response2.setStatus(500);
-			return response2;
-		}
-	}*/
-
 	public ResponseModel consultartransacciones() {
 		ResponseModel response2 = new ResponseModel();
 		ArrayList<GuardarLoteDTO> response = null;
@@ -3346,61 +3301,131 @@ public class GiomDao {
 
 		return response;
 	}
+	
+	
+	// === MÉTODO PARA DETECTAR ARCHIVOS VACIOS EN EL SERVIDOR ===
+	private boolean hayArchivosVaciosEnFTP() {
+	    FTPClient ftpClient = null;
+	    try {
+	        // Obtener configuración FTP igual que en leerArchivoDesdeFTP
+	        String host = "180.183.171.164";
+	        ConsultarConfiguarcionDTO datos = new ConsultarConfiguarcionDTO();
+
+	        datos.setDescriptor("FU");
+	        List<ParametrosDTO> parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();
+	        String usuario = parametrosPivot.get(0).getValorConfigurado();
+
+	        datos.setDescriptor("FP");
+	        parametrosPivot = (List<ParametrosDTO>) this.consultarConfiguracion(datos).getData();
+	        String password = parametrosPivot.get(0).getValorConfigurado();
+
+	        String path = "/home/ftpq0326/giom/recive/";
+
+	        ftpClient = FtpUtil.getFTPClient(host, 21, usuario, password);
+
+	        if (ftpClient != null && ftpClient.isConnected()) {
+	            ftpClient.enterLocalPassiveMode();
+
+	            if (!ftpClient.changeWorkingDirectory(path)) {
+	                addLogMemoria("No se pudo cambiar al directorio: {}", path);
+	                return false;
+	            }
+
+	            FTPFile[] files = ftpClient.listFiles();
+
+	            for (FTPFile file : files) {
+	                if (file.getName().startsWith("GIOM_RSP101") && file.getSize() == 0) {
+	                    addLogImportante("📂 Archivo vacío detectado: {}", file.getName());
+	                    return true;
+	                }
+	            }
+	        } else {
+	            addLogMemoria("No se pudo conectar al FTP para verificar archivos vacíos");
+	        }
+	    } catch (Exception e) {
+	        addLogError("Error verificando archivos vacíos en FTP: {}", e.getMessage());
+	    } finally {
+	        if (ftpClient != null) {
+	            try {
+	                ftpClient.logout();
+	                ftpClient.disconnect();
+	            } catch (IOException e) {
+	                addLogMemoria("Error desconectando FTP: {}", e.getMessage());
+	            }
+	        }
+	    }
+	    return false;
+	}
 
 	// === MÉTODO EJECUTAR FTP ===
 
 	@Scheduled(cron = "0 */30 * * * *")
 	public ResponseModel ejecutarFtp() {
-		LoteDTO.resetContador();
-		addLogMemoria("Iniciando el proceso asincrónico de mainframe automáticamente");
+	    LoteDTO.resetContador();
+	    addLogMemoria("Iniciando el proceso asincrónico de mainframe automáticamente");
 
-		// 0. Actualizar estados por fecha
-		addLogMemoria("Actualizando estados por fecha...");
-		ResponseModel estadoResponse = this.actualizarEstadosPorFecha();
-		if (estadoResponse.getStatus() != 200) {
-			addLogError("Error al actualizar estados por fecha: {}", estadoResponse.getMessage());
-		} else {
-			addLogMemoria("Actualización de estados por fecha completada: {}", estadoResponse.getMessage());
-		}
+	    // 0. Actualizar estados por fecha
+	    addLogMemoria("Actualizando estados por fecha...");
+	    ResponseModel estadoResponse = this.actualizarEstadosPorFecha();
+	    if (estadoResponse.getStatus() != 200) {
+	        addLogError("Error al actualizar estados por fecha: {}", estadoResponse.getMessage());
+	    } else {
+	        addLogMemoria("Actualización de estados por fecha completada: {}", estadoResponse.getMessage());
+	    }
 
-		// 1. Verificar lotes activos
-		boolean ejecutado = this.verificarDataMainframe();
+	    // 🆕 1. Verificar si hay archivos vacíos en FTP
+	    boolean hayArchivosVacios = hayArchivosVaciosEnFTP();
 
-		// 2. Validar horario configurado
-		if (ejecutado) {
-			addLogMemoria("Iniciando validación de horario...");
-			ejecutado = false;
+	    // 2. Si hay archivos vacíos, IGNORAMOS verificarDataMainframe()
+	    boolean ejecutado = false;
+	    if (hayArchivosVacios) {
+	        addLogImportante("📂 Se detectaron archivos vacíos. Se forzará la ejecución (sujeto a horario)");
+	        ejecutado = true; // Forzamos ejecución (luego validará horario)
+	    } else {
+	        // Si no hay archivos vacíos, hacemos la verificación normal
+	        ejecutado = this.verificarDataMainframe();
+	        if (ejecutado) {
+	            addLogMemoria("No hay data en mainframe, se procede con la ejecución");
+	        } else {
+	            addLogMemoria("Ya hay data en mainframe (lotes en L), se omite ejecución");
+	        }
+	    }
 
-			ConsultarConfiguarcionDTO horaData = new ConsultarConfiguarcionDTO();
-			horaData.setDescriptor("H");
-			ResponseModel dataHoraSalida = this.consultarConfiguracion(horaData);
+	    // 3. Validar horario configurado (si ejecutado es true)
+	    if (ejecutado) {
+	        addLogMemoria("Iniciando validación de horario...");
+	        ejecutado = false;
 
-			if (dataHoraSalida.getStatus() == 200) {
-				List<ParametrosDTO> horasData = (List<ParametrosDTO>) dataHoraSalida.getData();
+	        ConsultarConfiguarcionDTO horaData = new ConsultarConfiguarcionDTO();
+	        horaData.setDescriptor("H");
+	        ResponseModel dataHoraSalida = this.consultarConfiguracion(horaData);
 
-				if (horasData != null && !horasData.isEmpty()) {
-					LocalTime horaActual = LocalTime.now(ZoneId.of("America/Caracas"));
-					addLogMemoria("Hora actual: {}", horaActual.format(DateTimeFormatter.ofPattern("HH:mm")));
+	        if (dataHoraSalida.getStatus() == 200) {
+	            List<ParametrosDTO> horasData = (List<ParametrosDTO>) dataHoraSalida.getData();
 
-					for (ParametrosDTO parametrosDTO : horasData) {
-						if (parametrosDTO.getEstado() == 1) {
-							LocalTime horaConfigurada = LocalTime.parse(parametrosDTO.getValorConfigurado());
-							addLogMemoria("Validando hora: {}", horaConfigurada);
+	            if (horasData != null && !horasData.isEmpty()) {
+	                LocalTime horaActual = LocalTime.now(ZoneId.of("America/Caracas"));
+	                addLogMemoria("Hora actual: {}", horaActual.format(DateTimeFormatter.ofPattern("HH:mm")));
 
-							if (horaConfigurada.getHour() == horaActual.getHour()) {
-								addLogMemoria("¡Ejecución permitida! Coincidencia con hora: {}",
-										horaConfigurada.format(DateTimeFormatter.ofPattern("HH:mm")));
-								ejecutado = true;
-								break;
-							}
-						}
-					}
-				}
-			} else {
-				addLogError("Error al consultar horas configuradas: {}", dataHoraSalida.getMessage());
-			}
-			addLogMemoria("Resultado de validación de horas: {}", ejecutado);
-		}
+	                for (ParametrosDTO parametrosDTO : horasData) {
+	                    if (parametrosDTO.getEstado() == 1) {
+	                        LocalTime horaConfigurada = LocalTime.parse(parametrosDTO.getValorConfigurado());
+	                        addLogMemoria("Validando hora: {}", horaConfigurada);
+
+	                        if (horaConfigurada.getHour() == horaActual.getHour()) {
+	                            addLogMemoria("¡Ejecución permitida! Coincidencia con hora: {}",
+	                                    horaConfigurada.format(DateTimeFormatter.ofPattern("HH:mm")));
+	                            ejecutado = true;
+	                            break;
+	                        }
+	                    }
+	                }
+	            }
+	        } else {
+	            addLogError("Error al consultar horas configuradas: {}", dataHoraSalida.getMessage());
+	        }
+	        addLogMemoria("Resultado de validación de horas: {}", ejecutado);
+	    }
 
 		if (ejecutado) {
 			ResponseModel lotesActivosResponse = obtenerLotesActivos();
@@ -3518,6 +3543,15 @@ public class GiomDao {
 									.collect(Collectors.toList());
 
 							String idLotesStr = String.join(",", idLotes);
+							
+							// ----- SEMAFORO
+							 ResponseModel semaforoResponse = marcarEnvioLote(idLotesStr);
+						        if (semaforoResponse.getStatus() != 200) {
+						            addLogError("Error al marcar envío en semáforo: {}", semaforoResponse.getMessage());
+						        } else {
+						            addLogImportante("Semáforo marcado como rojo para lotes: {}", idLotesStr);
+						        }
+						        //----------
 							ResponseModel response = this.actualizarEstadoLoteFTP(idLotesStr, "L");
 
 							if (response.getStatus() == 200) {
@@ -3618,7 +3652,33 @@ public class GiomDao {
 					addLogImportante("Tamaño del archivo {}: {} bytes", fileName, fileSize);
 
 					if (fileSize == 0) {
-						addLogImportante("Archivo {} está vacío, saltando...", fileName);
+						addLogImportante("⚠️ Archivo {} está vacío. Iniciando protocolo de recuperación...", fileName);
+
+						// 1. Llamar al procedimiento para mover lotes 'L' a 'T'
+						ResponseModel recoveryResponse = recuperarLotesPorArchivoVacio();
+						if (recoveryResponse.getStatus() != 200) {
+							addLogError("❌ Falló la recuperación de lotes: {}", recoveryResponse.getMessage());
+							continue; // No continuar si falla la recuperación
+						}
+
+						// 2. Mover el archivo vacío a giomrespaldo (igual que antes)
+						String newFilePath = newDirectoryPath + fileName;
+						if (ftpClient.rename(fileName, newFilePath)) {
+							addLogImportante("✅ Archivo vacío movido a respaldo: {}", newFilePath);
+						} else {
+							addLogError("❌ No se pudo mover el archivo vacío a respaldo. Código FTP: {}", ftpClient.getReplyCode());
+							// Intentar eliminar si no se puede mover
+							if (ftpClient.deleteFile(fileName)) {
+								addLogImportante("✅ Archivo vacío eliminado (no se pudo mover)");
+							} else {
+								addLogError("❌ No se pudo eliminar el archivo vacío. Código FTP: {}", ftpClient.getReplyCode());
+							}
+						}
+
+						// 3. Forzar envío de lotes pendientes
+						addLogImportante("🚀 Forzando envío de lotes en 'A' y 'W' después de limpieza...");
+						this.ejecutarFtp();
+
 						continue;
 					}
 
@@ -3686,85 +3746,265 @@ public class GiomDao {
 		return responseModel;
 	}
 
+	public ResponseModel recuperarLotesPorArchivoVacio() {
+		ResponseModel response = new ResponseModel();
+		try {
+			SimpleJdbcCall jdbcCall = new SimpleJdbcCall(jdbcTemplate)
+					.withProcedureName("PRC_RECUPERAR_LOTES_POR_ARCHIVO_VACIO")
+					.declareParameters(
+							new SqlOutParameter("P_LOTES_AFECTADOS", Types.NUMERIC),
+							new SqlOutParameter("P_TRANS_AFECTADAS", Types.NUMERIC),
+							new SqlOutParameter("COD_RET", Types.VARCHAR),
+							new SqlOutParameter("DE_CODRET", Types.VARCHAR)
+					);
+
+			Map<String, Object> result = jdbcCall.execute();
+
+			int lotes = ((BigDecimal) result.get("P_LOTES_AFECTADOS")).intValue();
+			int trans = ((BigDecimal) result.get("P_TRANS_AFECTADAS")).intValue();
+			String codRet = (String) result.get("COD_RET");
+			String descRet = (String) result.get("DE_CODRET");
+
+			if ("1000".equals(codRet)) {
+				addLogImportante("✅ Procedimiento ejecutado: {} lotes y {} transacciones movidos de L a T", lotes, trans);
+				response.setStatus(200);
+				response.setMessage(descRet);
+
+				// 🔧 CORRECCIÓN: Usar HashMap en lugar de Map.of()
+				Map<String, Object> data = new HashMap<>();
+				data.put("lotes", lotes);
+				data.put("transacciones", trans);
+				response.setData(data);
+			} else {
+				addLogError("❌ Error en procedimiento: {}", descRet);
+				response.setStatus(500);
+				response.setMessage(descRet);
+			}
+		} catch (Exception e) {
+			addLogError("❌ Excepción al llamar PRC_RECUPERAR_LOTES_POR_ARCHIVO_VACIO: {}", e.getMessage());
+			response.setStatus(500);
+			response.setMessage("Error: " + e.getMessage());
+		}
+		return response;
+	}
+	
+	// === MÉTODOS PARA EL SEMAFORO ===
+	
+	public ResponseModel obtenerSemaforoLotes() {
+	    ResponseModel response = new ResponseModel();
+	    try {
+	        SimpleJdbcCall jdbcCall = new SimpleJdbcCall(jdbcTemplate)
+	                .withProcedureName("PRC_OBTENER_SEMAFORO_LOTES")
+	                .declareParameters(
+	                        new SqlOutParameter("P_OUT_DATA", OracleTypes.CURSOR, new SemaforoLoteRowMapper()),
+	                        new SqlOutParameter("COD_RET", OracleTypes.VARCHAR),
+	                        new SqlOutParameter("DE_RET", OracleTypes.VARCHAR)
+	                );
+	        Map<String, Object> result = jdbcCall.execute();
+	        String codRet = (String) result.get("COD_RET");
+	        String descRet = (String) result.get("DE_RET");
+	        @SuppressWarnings("unchecked")
+	        List<SemaforoLoteDTO> data = (List<SemaforoLoteDTO>) result.get("P_OUT_DATA");
+
+	        response.setStatus("1000".equals(codRet) ? 200 : 500);
+	        response.setCode("1000".equals(codRet) ? 1000 : 9999);
+	        response.setMessage(descRet);
+	        response.setData(data);
+	    } catch (Exception e) {
+	        log.error("Error en obtenerSemaforoLotes: {}", e.getMessage(), e);
+	        response.setStatus(500);
+	        response.setCode(9999);
+	        response.setMessage("Error al consultar semáforo de lotes: " + e.getMessage());
+	    }
+	    return response;
+	}
+	
+	public ResponseModel marcarEnvioLote(String idsLote) {
+	    ResponseModel response = new ResponseModel();
+	    try {
+	        SimpleJdbcCall jdbcCall = new SimpleJdbcCall(jdbcTemplate)
+	                .withProcedureName("PRC_MARCAR_ENVIO_LOTE")
+	                .declareParameters(
+	                        new SqlParameter("P_ID_LOTE", OracleTypes.VARCHAR),
+	                        new SqlOutParameter("COD_RET", OracleTypes.VARCHAR),
+	                        new SqlOutParameter("DE_CODRET", OracleTypes.VARCHAR)
+	                );
+	        MapSqlParameterSource params = new MapSqlParameterSource()
+	                .addValue("P_ID_LOTE", idsLote);
+	        Map<String, Object> result = jdbcCall.execute(params);
+	        String codRet = (String) result.get("COD_RET");
+	        String descRet = (String) result.get("DE_CODRET");
+	        response.setStatus("1000".equals(codRet) ? 200 : 500);
+	        response.setCode("1000".equals(codRet) ? 1000 : 9999);
+	        response.setMessage(descRet);
+	    } catch (Exception e) {
+	        log.error("Error en marcarEnvioLote: {}", e.getMessage(), e);
+	        response.setStatus(500);
+	        response.setCode(9999);
+	        response.setMessage("Error al marcar envío: " + e.getMessage());
+	    }
+	    return response;
+	}
+	
+	public ResponseModel marcarRecepcionLote(Long idLote) {
+	    ResponseModel response = new ResponseModel();
+	    try {
+	        SimpleJdbcCall jdbcCall = new SimpleJdbcCall(jdbcTemplate)
+	                .withProcedureName("PRC_MARCAR_RECEPCION_LOTE")
+	                .declareParameters(
+	                        new SqlParameter("P_ID_LOTE", OracleTypes.NUMBER),
+	                        new SqlOutParameter("COD_RET", OracleTypes.VARCHAR),
+	                        new SqlOutParameter("DE_CODRET", OracleTypes.VARCHAR)
+	                );
+	        MapSqlParameterSource params = new MapSqlParameterSource()
+	                .addValue("P_ID_LOTE", idLote);
+	        Map<String, Object> result = jdbcCall.execute(params);
+	        String codRet = (String) result.get("COD_RET");
+	        String descRet = (String) result.get("DE_CODRET");
+	        response.setStatus("1000".equals(codRet) ? 200 : 500);
+	        response.setCode("1000".equals(codRet) ? 1000 : 9999);
+	        response.setMessage(descRet);
+	    } catch (Exception e) {
+	        log.error("Error en marcarRecepcionLote: {}", e.getMessage(), e);
+	        response.setStatus(500);
+	        response.setCode(9999);
+	        response.setMessage("Error al marcar recepción: " + e.getMessage());
+	    }
+	    return response;
+	}
+	
+	public ResponseModel registrarIncidenciaArchivoVacio(String nombreArchivo, String descripcion) {
+	    ResponseModel response = new ResponseModel();
+	    try {
+	        SimpleJdbcCall jdbcCall = new SimpleJdbcCall(jdbcTemplate)
+	                .withProcedureName("PRC_REGISTRAR_INCIDENCIA")
+	                .declareParameters(
+	                        new SqlParameter("P_NOMBRE_ARCHIVO", OracleTypes.VARCHAR),
+	                        new SqlParameter("P_DESCRIPCION", OracleTypes.VARCHAR),
+	                        new SqlOutParameter("COD_RET", OracleTypes.VARCHAR),
+	                        new SqlOutParameter("DE_CODRET", OracleTypes.VARCHAR)
+	                );
+	        MapSqlParameterSource params = new MapSqlParameterSource()
+	                .addValue("P_NOMBRE_ARCHIVO", nombreArchivo)
+	                .addValue("P_DESCRIPCION", descripcion);
+	        Map<String, Object> result = jdbcCall.execute(params);
+	        String codRet = (String) result.get("COD_RET");
+	        String descRet = (String) result.get("DE_CODRET");
+	        response.setStatus("1000".equals(codRet) ? 200 : 500);
+	        response.setCode("1000".equals(codRet) ? 1000 : 9999);
+	        response.setMessage(descRet);
+	    } catch (Exception e) {
+	        log.error("Error en registrarIncidenciaArchivoVacio: {}", e.getMessage(), e);
+	        response.setStatus(500);
+	        response.setCode(9999);
+	        response.setMessage("Error al registrar incidencia: " + e.getMessage());
+	    }
+	    return response;
+	}
+
 	// === MÉTODO PROCESAR ARCHIVO MASIVAMENTE ===
 
 	private ResponseModel procesarArchivoMasivamente(String contenido, String fileName, FTPClient ftpClient, String newDirectoryPath) {
-		long inicioTotal = System.currentTimeMillis();
-		ResponseModel responseModel = new ResponseModel();
+	    long inicioTotal = System.currentTimeMillis();
+	    ResponseModel responseModel = new ResponseModel();
 
-		try {
-			List<LoteDTO> todosLosRegistros = parsearTexto(contenido);
-			addLogImportante("📊 ARCHIVO {}: {} registros parseados", fileName, todosLosRegistros.size());
+	    try {
+	        List<LoteDTO> todosLosRegistros = parsearTexto(contenido);
+	        addLogImportante("📊 ARCHIVO {}: {} registros parseados", fileName, todosLosRegistros.size());
 
-			if (todosLosRegistros.isEmpty()) {
-				responseModel.setStatus(400);
-				responseModel.setMessage("No hay registros para procesar");
-				return responseModel;
-			}
+	        // 🔴 Caso 1: Archivo vacío o sin registros
+	        if (todosLosRegistros.isEmpty()) {
+	            addLogError("⚠️ Archivo vacío o sin contenido parseable: {}", fileName);
+	            registrarIncidenciaArchivoVacio(fileName, "Archivo vacío o sin registros parseables");
+	            responseModel.setStatus(400);
+	            responseModel.setMessage("Archivo vacío o sin registros. Se ha registrado una incidencia.");
+	            return responseModel;
+	        }
 
-			List<LoteDTO> registrosValidos = filtrarRegistrosValidos(todosLosRegistros);
-			addLogImportante("✅ Registros válidos: {}/{}", registrosValidos.size(), todosLosRegistros.size());
+	        List<LoteDTO> registrosValidos = filtrarRegistrosValidos(todosLosRegistros);
+	        addLogImportante("✅ Registros válidos: {}/{}", registrosValidos.size(), todosLosRegistros.size());
 
-			if (registrosValidos.isEmpty()) {
-				responseModel.setStatus(400);
-				responseModel.setMessage("No hay registros válidos para procesar");
-				return responseModel;
-			}
+	        // 🔴 Caso 2: Ningún registro válido (todos con ID de lote o registro nulos)
+	        if (registrosValidos.isEmpty()) {
+	            addLogError("⚠️ No se encontraron registros válidos en el archivo: {}", fileName);
+	            registrarIncidenciaArchivoVacio(fileName, "No se encontraron registros válidos (ID de lote o registro nulos)");
+	            responseModel.setStatus(400);
+	            responseModel.setMessage("Archivo sin registros válidos. Incidencia registrada.");
+	            return responseModel;
+	        }
 
-			Map<String, List<LoteDTO>> registrosPorLote = registrosValidos.stream()
-					.collect(Collectors.groupingBy(LoteDTO::getIdLote));
+	        Map<String, List<LoteDTO>> registrosPorLote = registrosValidos.stream()
+	                .collect(Collectors.groupingBy(LoteDTO::getIdLote));
 
-			registrosPorLote.keySet().removeIf(key -> key == null || key.trim().isEmpty());
-			addLogImportante("📦 LOTES VÁLIDOS IDENTIFICADOS: {}", registrosPorLote.keySet());
+	        registrosPorLote.keySet().removeIf(key -> key == null || key.trim().isEmpty());
+	        addLogImportante("📦 LOTES VÁLIDOS IDENTIFICADOS: {}", registrosPorLote.keySet());
 
-			int totalRegistrosProcesados = 0;
-			int lotesProcesados = 0;
+	        int totalRegistrosProcesados = 0;
+	        int lotesProcesados = 0;
 
-			for (Map.Entry<String, List<LoteDTO>> entry : registrosPorLote.entrySet()) {
-				String idLote = entry.getKey();
-				List<LoteDTO> registrosDelLote = entry.getValue();
+	        for (Map.Entry<String, List<LoteDTO>> entry : registrosPorLote.entrySet()) {
+	            String idLote = entry.getKey();
+	            List<LoteDTO> registrosDelLote = entry.getValue();
 
-				addLogMemoria("🔄 Procesando lote {} con {} registros", idLote, registrosDelLote.size());
+	            addLogMemoria("🔄 Procesando lote {} con {} registros", idLote, registrosDelLote.size());
 
-				ResponseModel respuestaMasiva = actualizarRespuestasMainframeMasivo(registrosDelLote);
+	            // Actualizar transacciones masivamente
+	            ResponseModel respuestaMasiva = actualizarRespuestasMainframeMasivo(registrosDelLote);
 
-				if (respuestaMasiva.getStatus() == 200) {
-					totalRegistrosProcesados += registrosDelLote.size();
-					lotesProcesados++;
-					addLogMemoria("✅ Lote {} procesado: {} registros", idLote, registrosDelLote.size());
-				} else {
-					addLogError("❌ Error en lote {}: {}", idLote, respuestaMasiva.getMessage());
-				}
+	            if (respuestaMasiva.getStatus() == 200) {
+	                totalRegistrosProcesados += registrosDelLote.size();
+	                lotesProcesados++;
+	                addLogMemoria("✅ Lote {} procesado: {} registros", idLote, registrosDelLote.size());
+	            } else {
+	                addLogError("❌ Error en actualización de transacciones del lote {}: {}", idLote, respuestaMasiva.getMessage());
+	                // Aún así intentamos actualizar el estado del lote (puede que algunas transacciones se hayan actualizado)
+	            }
 
-				actualizarEstadosLoteMasivo(idLote, registrosDelLote);
-			}
+	            // Actualizar estado general del lote (basado en respuestas de mainframe)
+	            actualizarEstadosLoteMasivo(idLote, registrosDelLote);
 
-			long tiempoTotal = System.currentTimeMillis() - inicioTotal;
-			long segundos = tiempoTotal / 1000;
-			double velocidad = segundos > 0 ? totalRegistrosProcesados / (double) segundos : totalRegistrosProcesados;
+	            // 🟢 Marcar RECEPCIÓN del lote (semáforo verde y fecha de recepción)
+	            try {
+	                Long idLoteLong = Long.parseLong(idLote);
+	                ResponseModel semaforoResponse = marcarRecepcionLote(idLoteLong);
+	                if (semaforoResponse.getStatus() == 200) {
+	                    addLogImportante("🟢 Semáforo puesto en VERDE para lote {} (recepción confirmada)", idLote);
+	                } else {
+	                    addLogError("❌ Error al marcar recepción del lote {}: {}", idLote, semaforoResponse.getMessage());
+	                }
+	            } catch (NumberFormatException e) {
+	                addLogError("❌ ID de lote inválido (no numérico) al marcar recepción: {}", idLote);
+	            }
+	        }
 
-			addLogImportante("===========================================");
-			addLogImportante("🎉 PROCESAMIENTO MASIVO COMPLETADO");
-			addLogImportante("📁 Archivo: {}", fileName);
-			addLogImportante("📊 Registros parseados: {}", todosLosRegistros.size());
-			addLogImportante("✅ Registros válidos: {}", registrosValidos.size());
-			addLogImportante("📈 Registros procesados: {}/{}", totalRegistrosProcesados, registrosValidos.size());
-			addLogImportante("📦 Lotes procesados: {}", lotesProcesados);
-			addLogImportante("⏱️ Tiempo total: {} segundos", segundos);
-			addLogImportante("🚀 Velocidad: {}/segundo", String.format("%.2f", velocidad));
-			addLogImportante("===========================================");
+	        long tiempoTotal = System.currentTimeMillis() - inicioTotal;
+	        long segundos = tiempoTotal / 1000;
+	        double velocidad = segundos > 0 ? totalRegistrosProcesados / (double) segundos : totalRegistrosProcesados;
 
-			responseModel.setStatus(200);
-			responseModel.setMessage(String.format("Procesados %d de %d registros válidos en %d segundos",
-					totalRegistrosProcesados, registrosValidos.size(), segundos));
+	        addLogImportante("===========================================");
+	        addLogImportante("🎉 PROCESAMIENTO MASIVO COMPLETADO");
+	        addLogImportante("📁 Archivo: {}", fileName);
+	        addLogImportante("📊 Registros parseados: {}", todosLosRegistros.size());
+	        addLogImportante("✅ Registros válidos: {}", registrosValidos.size());
+	        addLogImportante("📈 Registros procesados: {}/{}", totalRegistrosProcesados, registrosValidos.size());
+	        addLogImportante("📦 Lotes procesados: {}", lotesProcesados);
+	        addLogImportante("⏱️ Tiempo total: {} segundos", segundos);
+	        addLogImportante("🚀 Velocidad: {}/segundo", String.format("%.2f", velocidad));
+	        addLogImportante("===========================================");
 
-		} catch (Exception e) {
-			addLogError("❌ ERROR en procesamiento masivo: {}", e.getMessage());
-			responseModel.setStatus(500);
-			responseModel.setMessage("Error en procesamiento masivo: " + e.getMessage());
-		}
+	        responseModel.setStatus(200);
+	        responseModel.setMessage(String.format("Procesados %d de %d registros válidos en %d segundos",
+	                totalRegistrosProcesados, registrosValidos.size(), segundos));
 
-		return responseModel;
+	    } catch (Exception e) {
+	        addLogError("❌ ERROR en procesamiento masivo: {}", e.getMessage(), e);
+	        // También registrar incidencia por excepción inesperada
+	        registrarIncidenciaArchivoVacio(fileName, "Excepción durante procesamiento: " + e.getMessage());
+	        responseModel.setStatus(500);
+	        responseModel.setMessage("Error en procesamiento masivo: " + e.getMessage());
+	    }
+
+	    return responseModel;
 	}
 
 	// === MÉTODOS AUXILIARES PARA PROCESAMIENTO ===

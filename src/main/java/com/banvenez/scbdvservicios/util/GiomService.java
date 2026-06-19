@@ -46,6 +46,10 @@ public class GiomService {
 	public ResponseModel probarConexionLogs() {
 		return giomDao.probarConexionLogs();
 	}
+	
+	public ResponseModel obtenerSemaforoLotes() {
+	    return giomDao.obtenerSemaforoLotes();
+	}
 
 	// Método para guardar log desde el servicio
 	public ResponseModel guardarLog(String nivel, String mensaje, String metodo, String clase) {
@@ -88,6 +92,10 @@ public class GiomService {
 				fechaInicio, fechaFin);
 		return giomDao.obtenerResumenCobranzas(fechaInicio, fechaFin);
 	}
+	public ResponseModel recuperarLotesPorArchivoVacio() {
+		return giomDao.recuperarLotesPorArchivoVacio();
+	}
+
 
 
 	// NUEVOS MÉTODOS PARA DEBUG
